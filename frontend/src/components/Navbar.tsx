@@ -1,195 +1,48 @@
 "use client";
 
-import React, { useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
-import { Tractor, LogOut, LayoutDashboard, Menu, X } from "lucide-react";
+import { ArrowUpRight, LayoutDashboard, Leaf, LogOut, Menu, X } from "lucide-react";
 
 export default function Navbar() {
   const { user, logout, setAuthModalOpen, setAuthMode } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-  const handleOpenLogin = () => {
-    setAuthMode("login");
-    setAuthModalOpen(true);
-  };
-
-  const handleOpenRegister = () => {
-    setAuthMode("register");
-    setAuthModalOpen(true);
-  };
+  const showAuth = (mode: "login" | "register") => { setAuthMode(mode); setAuthModalOpen(true); setMobileMenuOpen(false); };
+  const links = [["Beranda", "/"], ["Katalog alat", "/#katalog"], ["Cara sewa", "/#cara-sewa"], ["Bantuan", "/#bantuan"]];
 
   return (
-    <header className="sticky top-0 z-40 bg-[#195B3E] text-white shadow-md border-b border-[#12432d]">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-20">
-          {/* Brand Logo */}
-          <Link href="/" className="flex items-center space-x-3 group">
-            <div className="w-12 h-12 rounded-xl bg-[#FAF5E9] text-[#195B3E] flex items-center justify-center font-bold shadow-inner group-hover:scale-105 transition-transform">
-              <Tractor className="w-7 h-7" />
-            </div>
-            <div>
-              <span className="text-2xl font-black tracking-tight text-[#FAF5E9] block leading-none">
-                TaniSewa
-              </span>
-              <span className="text-xs text-[#a3d4bd] font-medium tracking-wide">
-                Penyewaan Alat Tani Modern
-              </span>
-            </div>
-          </Link>
+    <header className="sticky top-0 z-50 border-b border-[#e8e9e2] bg-[#fbfaf6]/95 text-[#2e4035] backdrop-blur">
+      <div className="mx-auto flex h-[72px] max-w-[1312px] items-center justify-between px-6 sm:px-10 lg:px-0">
+        <Link href="/" className="flex items-center gap-2.5" aria-label="SewaAlat beranda">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#e9eee5] text-[#285b43]"><Leaf size={17} strokeWidth={1.8} /></span>
+          <span className="font-display text-[19px] font-semibold tracking-[-0.03em] text-[#233f32]">SewaAlat</span>
+        </Link>
 
-          {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-8 font-medium text-sm">
-            <Link href="/" className="hover:text-[#FAF5E9] transition-colors">
-              Beranda
-            </Link>
-            <Link href="/#katalog" className="hover:text-[#FAF5E9] transition-colors">
-              Katalog Alat
-            </Link>
-            <Link href="/#cara-sewa" className="hover:text-[#FAF5E9] transition-colors">
-              Cara Menyewa
-            </Link>
-            <Link href="/#ketentuan" className="hover:text-[#FAF5E9] transition-colors">
-              Syarat & Ketentuan
-            </Link>
-          </nav>
+        <nav className="hidden items-center gap-8 md:flex">
+          {links.map(([label, href]) => <Link key={label} href={href} className="text-[10px] text-[#526257] transition hover:text-[#205b40]">{label}</Link>)}
+        </nav>
 
-          {/* Auth Action Buttons */}
-          <div className="hidden md:flex items-center space-x-4">
-            {user ? (
-              <div className="flex items-center space-x-4">
-                <Link
-                  href={user.role === "admin" ? "/dashboard/admin" : "/dashboard/penyewa"}
-                  className="flex items-center space-x-2 bg-[#FAF5E9] text-[#195B3E] px-4 py-2.5 rounded-lg font-semibold text-sm hover:bg-white transition-all shadow-sm"
-                >
-                  <LayoutDashboard className="w-4 h-4" />
-                  <span>Dashboard {user.role === "admin" ? "Admin" : "Penyewa"}</span>
-                </Link>
-                <div className="text-right">
-                  <span className="block text-xs font-bold text-[#FAF5E9]">{user.name}</span>
-                  <span className="inline-block text-[10px] uppercase font-semibold px-2 py-0.5 rounded bg-[#12432d] text-[#FAF5E9]">
-                    {user.role}
-                  </span>
-                </div>
-                <button
-                  onClick={() => void logout().catch((error) => window.alert(error.message))}
-                  title="Logout"
-                  className="p-2 rounded-lg text-white hover:bg-[#12432d] transition-colors"
-                >
-                  <LogOut className="w-5 h-5" />
-                </button>
-              </div>
-            ) : (
-              <div className="flex items-center space-x-3">
-                <button
-                  onClick={handleOpenLogin}
-                  className="px-4 py-2 rounded-lg text-sm font-semibold border border-[#FAF5E9] text-[#FAF5E9] hover:bg-[#12432d] transition-colors"
-                >
-                  Masuk
-                </button>
-                <button
-                  onClick={handleOpenRegister}
-                  className="px-4 py-2 rounded-lg text-sm font-semibold bg-[#FAF5E9] text-[#195B3E] hover:bg-white shadow-sm transition-all"
-                >
-                  Daftar
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Mobile menu trigger */}
-          <div className="md:hidden flex items-center">
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-2 text-white hover:bg-[#12432d] rounded-lg"
-            >
-              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-            </button>
-          </div>
+        <div className="hidden items-center gap-2 md:flex">
+          {user ? (
+            <>
+              <Link href={user.role === "admin" ? "/dashboard/admin" : "/dashboard/penyewa"} className="inline-flex items-center gap-2 rounded-sm bg-[#205b40] px-4 py-2.5 text-[10px] font-medium text-white transition hover:bg-[#16442f]"><LayoutDashboard size={13} />Dashboard</Link>
+              <button onClick={() => void logout().catch((error) => window.alert(error.message))} aria-label="Keluar" className="p-2 text-[#526257] hover:text-[#205b40]"><LogOut size={15} /></button>
+            </>
+          ) : (
+            <><button onClick={() => showAuth("login")} className="rounded-sm border border-[#dce1d9] bg-white px-4 py-2.5 text-[10px] text-[#405448] transition hover:border-[#285b43]">Masuk</button><button onClick={() => showAuth("register")} className="inline-flex items-center gap-2 rounded-sm bg-[#205b40] px-4 py-2.5 text-[10px] text-white transition hover:bg-[#16442f]">Daftar penyewa <ArrowUpRight size={12} /></button></>
+          )}
         </div>
+
+        <button aria-label={mobileMenuOpen ? "Tutup menu" : "Buka menu"} aria-expanded={mobileMenuOpen} onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="p-2 text-[#285b43] md:hidden">{mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}</button>
       </div>
 
-      {/* Mobile Drawer Navigation */}
-      {mobileMenuOpen && (
-        <div className="md:hidden bg-[#12432d] border-t border-[#195B3E] px-4 pt-3 pb-6 space-y-3">
-          <Link
-            href="/"
-            onClick={() => setMobileMenuOpen(false)}
-            className="block text-white py-2 font-medium hover:text-[#FAF5E9]"
-          >
-            Beranda
-          </Link>
-          <Link
-            href="/#katalog"
-            onClick={() => setMobileMenuOpen(false)}
-            className="block text-white py-2 font-medium hover:text-[#FAF5E9]"
-          >
-            Katalog Alat
-          </Link>
-          <Link
-            href="/#cara-sewa"
-            onClick={() => setMobileMenuOpen(false)}
-            className="block text-white py-2 font-medium hover:text-[#FAF5E9]"
-          >
-            Cara Menyewa
-          </Link>
-          <Link
-            href="/#ketentuan"
-            onClick={() => setMobileMenuOpen(false)}
-            className="block text-white py-2 font-medium hover:text-[#FAF5E9]"
-          >
-            Syarat & Ketentuan
-          </Link>
-
-          <div className="pt-4 border-t border-[#195B3E] space-y-2">
-            {user ? (
-              <>
-                <Link
-                  href={user.role === "admin" ? "/dashboard/admin" : "/dashboard/penyewa"}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="w-full flex items-center justify-center space-x-2 bg-[#FAF5E9] text-[#195B3E] py-2.5 rounded-lg font-bold text-sm"
-                >
-                  <LayoutDashboard className="w-4 h-4" />
-                  <span>Dashboard {user.role === "admin" ? "Admin" : "Penyewa"}</span>
-                </Link>
-                <button
-                  onClick={() => {
-                    void logout().then(() => setMobileMenuOpen(false)).catch((error) => window.alert(error.message));
-                    setMobileMenuOpen(false);
-                  }}
-                  className="w-full py-2 bg-red-700 text-white rounded-lg font-medium text-sm"
-                >
-                  Logout ({user.name})
-                </button>
-              </>
-            ) : (
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  onClick={() => {
-                    handleOpenLogin();
-                    setMobileMenuOpen(false);
-                  }}
-                  className="w-full py-2.5 border border-[#FAF5E9] text-[#FAF5E9] rounded-lg text-sm font-semibold"
-                >
-                  Masuk
-                </button>
-                <button
-                  onClick={() => {
-                    handleOpenRegister();
-                    setMobileMenuOpen(false);
-                  }}
-                  className="w-full py-2.5 bg-[#FAF5E9] text-[#195B3E] rounded-lg text-sm font-bold"
-                >
-                  Daftar
-                </button>
-              </div>
-            )}
-          </div>
+      {mobileMenuOpen && <nav className="border-t border-[#e8e9e2] bg-[#fbfaf6] px-6 py-4 md:hidden">
+        <div className="mx-auto flex max-w-[1312px] flex-col gap-3">
+          {links.map(([label, href]) => <Link key={label} href={href} onClick={() => setMobileMenuOpen(false)} className="py-1 text-sm text-[#526257]">{label}</Link>)}
+          {user ? <Link href={user.role === "admin" ? "/dashboard/admin" : "/dashboard/penyewa"} onClick={() => setMobileMenuOpen(false)} className="button-primary mt-2 justify-center">Dashboard</Link> : <div className="mt-2 grid grid-cols-2 gap-2"><button onClick={() => showAuth("login")} className="button-light justify-center">Masuk</button><button onClick={() => showAuth("register")} className="button-primary justify-center">Daftar penyewa</button></div>}
         </div>
-      )}
+      </nav>}
     </header>
   );
 }
-
-
-

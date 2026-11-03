@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import { useEffect, useState, type FormEvent } from "react";
+import { ArrowUpRight, CheckCircle2, Info, X } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { Search, Filter, Calendar, CheckCircle2, AlertCircle, X, ChevronRight, Info } from "lucide-react";
 
 interface Equipment {
   id: string;
@@ -12,66 +12,49 @@ interface Equipment {
   description: string;
   imageUrl: string;
   availableUnitsCount: number;
-  units: Array<{
-    id: string;
-    unitCode: string;
-    conditionStatus: string;
-  }>;
+  units: Array<{ id: string; unitCode: string; conditionStatus: string }>;
+  isSample?: boolean;
 }
+
+const samples: Equipment[] = [
+  { id: "sample-tiller", name: "Traktor Tangan", category: "Pengolahan Tanah", dailyRate: 150000, description: "Traktor tangan untuk menyiapkan lahan dengan cepat.", imageUrl: "https://images.unsplash.com/photo-1592982537447-7440770cbfc9?auto=format&fit=crop&w=720&q=80", availableUnitsCount: 4, units: [], isSample: true },
+  { id: "sample-transplanter", name: "Mesin Perontok Padi", category: "Panen & Pascapanen", dailyRate: 175000, description: "Membantu proses panen dan pascapanen lebih rapi.", imageUrl: "https://images.unsplash.com/photo-1586771107445-d3ca888129ff?auto=format&fit=crop&w=720&q=80", availableUnitsCount: 3, units: [], isSample: true },
+  { id: "sample-pump", name: "Pompa Air Irigasi", category: "Irigasi", dailyRate: 60000, description: "Pompa air untuk mendukung kebutuhan pengairan.", imageUrl: "https://images.unsplash.com/photo-1615811361523-6bd03d7748e7?auto=format&fit=crop&w=720&q=80", availableUnitsCount: 5, units: [], isSample: true },
+  { id: "sample-mower", name: "Mesin Potong Rumput", category: "Perawatan Tanaman", dailyRate: 45000, description: "Perawatan area tanam dan kebun lebih mudah.", imageUrl: "https://images.unsplash.com/photo-1589923188900-85dae523342b?auto=format&fit=crop&w=720&q=80", availableUnitsCount: 2, units: [], isSample: true },
+];
+
+const rupiah = (amount: number) => `Rp${amount.toLocaleString("id-ID")}`;
 
 export default function CatalogSection() {
   const { user, setAuthModalOpen, setAuthMode } = useAuth();
   const [equipments, setEquipments] = useState<Equipment[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedCategory, setSelectedCategory] = useState("Semua");
-  const [searchQuery, setSearchQuery] = useState("");
-
-  // Modal State for Booking
   const [activeEquipment, setActiveEquipment] = useState<Equipment | null>(null);
   const [startDateStr, setStartDateStr] = useState("");
   const [endDateStr, setEndDateStr] = useState("");
   const [bookingLoading, setBookingLoading] = useState(false);
   const [bookingMessage, setBookingMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
-  const categories = ["Semua", "Traktor", "Mesin Tanam", "Pompa Air", "Panen"];
-
-  const fetchEquipments = async () => {
-    setLoading(true);
-    try {
-      const url = new URL("/api/equipments", window.location.origin);
-      if (selectedCategory !== "Semua") url.searchParams.set("category", selectedCategory);
-      if (searchQuery) url.searchParams.set("search", searchQuery);
-
-      const res = await fetch(url.toString());
-      const data = await res.json();
-      if (res.ok) {
-        setEquipments(data);
-      }
-    } catch (error) {
-      console.error("Failed to load catalog", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    fetchEquipments();
-  }, [selectedCategory, searchQuery]);
+    let active = true;
+    fetch("/api/equipments")
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Katalog belum tersedia");
+        return response.json();
+      })
+      .then((data: unknown) => {
+        if (active && Array.isArray(data)) setEquipments(data.slice(0, 4));
+      })
+      .catch(() => { if (active) setEquipments([]); });
+    return () => { active = false; };
+  }, []);
 
-  // Calculate rental cost live
-  const calculateTotalCost = () => {
-    if (!startDateStr || !endDateStr || !activeEquipment) return { days: 0, total: 0 };
-    const start = new Date(startDateStr);
-    const end = new Date(endDateStr);
-    if (isNaN(start.getTime()) || isNaN(end.getTime()) || start >= end) return { days: 0, total: 0 };
-    
-    const diffTime = Math.abs(end.getTime() - start.getTime());
-    const days = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
-    const total = days * activeEquipment.dailyRate;
-    return { days, total };
-  };
+  const displayItems = equipments.length ? equipments : samples;
+  const start = startDateStr ? new Date(`${startDateStr}T00:00:00`) : null;
+  const end = endDateStr ? new Date(`${endDateStr}T00:00:00`) : null;
+  const days = start && end && end >= start ? Math.floor((end.getTime() - start.getTime()) / 86400000) + 1 : 0;
+  const total = activeEquipment ? days * activeEquipment.dailyRate : 0;
 
-  const handleOpenBookingModal = (item: Equipment) => {
+  const openBooking = (item: Equipment) => {
     if (!user) {
       setAuthMode("login");
       setAuthModalOpen(true);
@@ -83,302 +66,77 @@ export default function CatalogSection() {
     setBookingMessage(null);
   };
 
-  const handleBookingSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user || !activeEquipment) return;
+  const submitBooking = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!user || !activeEquipment || !startDateStr || !endDateStr) return;
     setBookingLoading(true);
     setBookingMessage(null);
-
     try {
-      const res = await fetch("/api/rentals", {
+      if (activeEquipment.isSample) throw new Error("Contoh katalog ini belum terhubung ke database. Hubungkan MySQL untuk menerima pesanan.");
+      const response = await fetch("/api/rentals", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: user.id,
-          equipmentId: activeEquipment.id,
-          startDateStr,
-          endDateStr,
-        }),
+        body: JSON.stringify({ userId: user.id, equipmentId: activeEquipment.id, startDateStr, endDateStr }),
       });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || "Gagal mengajukan pemesanan");
-      }
-
-      setBookingMessage({
-        type: "success",
-        text: `Pesanan berhasil diajukan dengan Kode Pesanan: ${data.rental.orderCode}! Silakan pantau dashboard untuk persetujuan admin.`,
-      });
-      fetchEquipments(); // refresh availability
-    } catch (err: any) {
-      setBookingMessage({
-        type: "error",
-        text: err.message,
-      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Gagal mengajukan pemesanan.");
+      setBookingMessage({ type: "success", text: `Pesanan ${result.rental.orderCode} berhasil diajukan.` });
+      const refreshed = await fetch("/api/equipments").then((res) => res.json());
+      if (Array.isArray(refreshed)) setEquipments(refreshed.slice(0, 4));
+    } catch (error) {
+      setBookingMessage({ type: "error", text: error instanceof Error ? error.message : "Gagal mengajukan pemesanan." });
     } finally {
       setBookingLoading(false);
     }
   };
 
-  const cost = calculateTotalCost();
-
   return (
-    <section id="katalog" className="py-20 bg-[#FAF5E9]">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Section Header */}
-        <div className="text-center max-w-3xl mx-auto mb-12 space-y-3">
-          <span className="text-xs font-black uppercase tracking-wider text-[#195B3E] bg-[#e8f5ee] px-3 py-1 rounded-full border border-[#195B3E]/20">
-            Katalog Alat & Mesin Tani
-          </span>
-          <h2 className="text-3xl sm:text-4xl font-black text-[#1F2937] tracking-tight">
-            Pilih Alat Pertanian Sesuai Kebutuhan Sawah Anda
-          </h2>
-          <p className="text-sm text-gray-600">
-            Seluruh unit fisik terawat secara rutin, dilengkapi kode inventaris unik, dan siap diambil di lokasi depot.
-          </p>
+    <section id="katalog" className="bg-[#fbfaf6] px-6 pb-16 pt-8 sm:px-10 lg:px-0">
+      <div className="mx-auto max-w-[1280px]">
+        <div className="mb-6 flex items-end justify-between gap-4">
+          <div>
+            <p className="eyebrow text-[#426451]">Pilihan paling dicari petani</p>
+            <h2 className="font-display mt-3 text-[30px] leading-tight text-[#243b30] sm:text-[34px]">Andalan untuk musim panenmu.</h2>
+          </div>
+          <a href="#katalog" className="hidden shrink-0 items-center gap-2 border border-[#d9ded6] bg-white px-3 py-2 text-[10px] text-[#354a3d] transition hover:border-[#285b43] sm:inline-flex">Semua alat pertanian <ArrowUpRight size={12} /></a>
         </div>
 
-        {/* Filter Controls */}
-        <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-md border border-[#195B3E]/10 mb-10 space-y-4">
-          <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
-            {/* Search Input */}
-            <div className="relative flex-1">
-              <Search className="w-5 h-5 text-gray-400 absolute left-3.5 top-3" />
-              <input
-                type="text"
-                placeholder="Cari nama alat (misal: Traktor, Pompa, Yanmar...)"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 bg-[#FAF5E9]/50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#195B3E]"
-              />
-            </div>
-
-            {/* Category Tabs */}
-            <div className="flex items-center space-x-1.5 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
-              {categories.map((cat) => (
-                <button
-                  key={cat}
-                  onClick={() => setSelectedCategory(cat)}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
-                    selectedCategory === cat
-                      ? "bg-[#195B3E] text-white shadow-sm"
-                      : "bg-[#FAF5E9] text-gray-700 hover:bg-gray-200"
-                  }`}
-                >
-                  {cat}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Catalog Grid */}
-        {loading ? (
-          <div className="text-center py-16 text-gray-500 font-medium text-sm">
-            Memuat data katalog alat tani...
-          </div>
-        ) : equipments.length === 0 ? (
-          <div className="text-center py-16 bg-white rounded-2xl border border-gray-200">
-            <p className="text-gray-500 font-medium">Tidak ada alat tani yang cocok dengan pencarian Anda.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            {equipments.map((item) => (
-              <div
-                key={item.id}
-                className="bg-white rounded-2xl overflow-hidden border border-gray-200 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between"
-              >
-                <div>
-                  {/* Image & Badge */}
-                  <div className="relative h-52 bg-gray-100 overflow-hidden">
-                    <img
-                      src={item.imageUrl}
-                      alt={item.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    />
-                    <div className="absolute top-3 left-3 flex items-center space-x-2">
-                      <span className="px-2.5 py-1 bg-[#195B3E] text-white text-[11px] font-extrabold rounded-lg shadow">
-                        {item.category}
-                      </span>
-                    </div>
-                    <div className="absolute bottom-3 right-3">
-                      <span
-                        className={`px-2.5 py-1 text-[11px] font-bold rounded-lg shadow ${
-                          item.availableUnitsCount > 0
-                            ? "bg-emerald-600 text-white"
-                            : "bg-red-600 text-white"
-                        }`}
-                      >
-                        {item.availableUnitsCount > 0
-                          ? `${item.availableUnitsCount} Unit Tersedia`
-                          : "Stok Sedang Habis"}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Body Info */}
-                  <div className="p-6 space-y-3">
-                    <h3 className="text-lg font-black text-gray-900 line-clamp-1">{item.name}</h3>
-                    <p className="text-xs text-gray-600 line-clamp-2 leading-relaxed">{item.description}</p>
-
-                    {/* Code unit chips */}
-                    <div className="pt-1 flex flex-wrap gap-1.5">
-                      {item.units.map((unit) => (
-                        <span
-                          key={unit.id}
-                          className={`text-[10px] font-mono px-2 py-0.5 rounded border ${
-                            unit.conditionStatus === "aktif"
-                              ? "bg-emerald-50 border-emerald-200 text-emerald-800"
-                              : "bg-amber-50 border-amber-200 text-amber-800"
-                          }`}
-                        >
-                          {unit.unitCode} ({unit.conditionStatus})
-                        </span>
-                      ))}
-                    </div>
-                  </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {displayItems.map((item) => (
+            <article key={item.id} className="product-card">
+              <img src={item.imageUrl} alt={item.name} className="product-card__image" />
+              <div className="p-3">
+                <p className="text-[9px] text-[#8a9088]">{item.category}</p>
+                <h3 className="font-display mt-1 text-[16px] leading-tight text-[#304438]">{item.name}</h3>
+                <div className="mt-2 flex items-center justify-between gap-2">
+                  <p className="text-[10px] font-semibold text-[#243b30]">{rupiah(item.dailyRate)} <span className="font-normal text-[#7b817a]">/ hari</span></p>
+                  <span className="rounded-full bg-[#e9eee5] px-2 py-1 text-[8px] text-[#426451]">{item.availableUnitsCount > 0 ? "Tersedia" : "Penuh"}</span>
                 </div>
-
-                {/* Footer Price & Action */}
-                <div className="p-6 pt-0 border-t border-gray-100 mt-4 flex items-center justify-between">
-                  <div>
-                    <span className="text-xs text-gray-400 block font-medium">Tarif Sewa Harian</span>
-                    <span className="text-xl font-black text-[#195B3E]">
-                      Rp {item.dailyRate.toLocaleString("id-ID")}
-                      <span className="text-xs font-normal text-gray-500"> / hari</span>
-                    </span>
-                  </div>
-
-                  <button
-                    onClick={() => handleOpenBookingModal(item)}
-                    disabled={item.availableUnitsCount === 0}
-                    className="px-4 py-2.5 bg-[#195B3E] text-white font-bold text-xs rounded-xl hover:bg-[#12432d] transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-md"
-                  >
-                    {item.availableUnitsCount > 0 ? "Sewa Alat" : "Habis"}
-                  </button>
-                </div>
+                <button onClick={() => openBooking(item)} className="mt-3 inline-flex items-center gap-2 border border-[#dce1d9] px-2.5 py-1.5 text-[9px] text-[#354a3d] transition hover:border-[#285b43] hover:bg-[#f5f6f0]">Lihat detail <ArrowUpRight size={11} /></button>
               </div>
-            ))}
-          </div>
-        )}
+            </article>
+          ))}
+        </div>
+        <p className="mt-4 text-[9px] text-[#8b9088]">*Harga per hari. Ketersediaan mengikuti tanggal yang dipilih, dan dikonfirmasi admin.</p>
       </div>
 
-      {/* Booking Modal */}
       {activeEquipment && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
-          <div className="bg-[#FAF5E9] rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden border border-[#195B3E]/20">
-            {/* Modal Header */}
-            <div className="bg-[#195B3E] text-white px-6 py-4 flex items-center justify-between">
-              <div>
-                <span className="text-[10px] uppercase font-bold tracking-wider text-[#a3d4bd]">Formulir Pemesanan</span>
-                <h3 className="text-lg font-black text-[#FAF5E9] line-clamp-1">{activeEquipment.name}</h3>
-              </div>
-              <button
-                onClick={() => setActiveEquipment(null)}
-                className="p-1 text-white/80 hover:text-white rounded-lg"
-              >
-                <X className="w-5 h-5" />
-              </button>
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4" onClick={() => setActiveEquipment(null)}>
+          <div role="dialog" aria-modal="true" aria-labelledby="booking-title" className="w-full max-w-[480px] bg-[#fbfaf6] p-6 shadow-2xl" onClick={(event) => event.stopPropagation()}>
+            <div className="flex items-start justify-between gap-4">
+              <div><p className="eyebrow text-[#426451]">Formulir penyewaan</p><h3 id="booking-title" className="font-display mt-2 text-2xl text-[#243b30]">{activeEquipment.name}</h3></div>
+              <button onClick={() => setActiveEquipment(null)} aria-label="Tutup" className="p-1 text-[#526358]"><X size={18} /></button>
             </div>
-
-            {/* Modal Body */}
-            <form onSubmit={handleBookingSubmit} className="p-6 space-y-4">
-              {bookingMessage && (
-                <div
-                  className={`p-3.5 rounded-xl text-xs font-semibold ${
-                    bookingMessage.type === "success"
-                      ? "bg-emerald-100 border border-emerald-300 text-emerald-800"
-                      : "bg-red-100 border border-red-300 text-red-800"
-                  }`}
-                >
-                  {bookingMessage.text}
-                </div>
-              )}
-
-              {/* Rate Summary */}
-              <div className="bg-white p-3.5 rounded-xl border border-gray-200 flex justify-between items-center text-xs">
-                <div>
-                  <span className="text-gray-500 block">Tarif Harian</span>
-                  <span className="font-bold text-[#195B3E] text-base">
-                    Rp {activeEquipment.dailyRate.toLocaleString("id-ID")}
-                  </span>
-                </div>
-                <div className="text-right">
-                  <span className="text-gray-500 block">Lokasi Pengambilan</span>
-                  <span className="font-bold text-gray-800">Depot TaniSewa Subang</span>
-                </div>
+            {bookingMessage && <p className={`mt-4 p-3 text-xs ${bookingMessage.type === "success" ? "bg-[#e9eee5] text-[#285b43]" : "bg-red-50 text-red-700"}`}>{bookingMessage.text}</p>}
+            <form onSubmit={submitBooking} className="mt-5 space-y-4">
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                <label className="space-y-1">Mulai sewa<input required type="date" min={new Date().toISOString().slice(0, 10)} value={startDateStr} onChange={(event) => setStartDateStr(event.target.value)} className="w-full border border-[#dce1d9] bg-white px-3 py-2" /></label>
+                <label className="space-y-1">Tanggal kembali<input required type="date" min={startDateStr || new Date().toISOString().slice(0, 10)} value={endDateStr} onChange={(event) => setEndDateStr(event.target.value)} className="w-full border border-[#dce1d9] bg-white px-3 py-2" /></label>
               </div>
-
-              {/* Date Inputs */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Tanggal Mulai Sewa</label>
-                  <input
-                    type="date"
-                    required
-                    min={new Date().toISOString().slice(0, 10)}
-                    value={startDateStr}
-                    onChange={(e) => setStartDateStr(e.target.value)}
-                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-xs font-semibold text-gray-800 focus:ring-2 focus:ring-[#195B3E] focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Tanggal Pengembalian</label>
-                  <input
-                    type="date"
-                    required
-                    min={startDateStr || new Date().toISOString().slice(0, 10)}
-                    value={endDateStr}
-                    onChange={(e) => setEndDateStr(e.target.value)}
-                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-xs font-semibold text-gray-800 focus:ring-2 focus:ring-[#195B3E] focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              {/* Live Fee Calculator */}
-              {cost.days > 0 && (
-                <div className="bg-[#e8f5ee] p-4 rounded-xl border border-[#195B3E]/20 space-y-1.5">
-                  <div className="flex justify-between text-xs text-gray-700">
-                    <span>Estimasi Durasi:</span>
-                    <span className="font-bold text-[#195B3E]">{cost.days} Hari</span>
-                  </div>
-                  <div className="flex justify-between text-xs text-gray-700">
-                    <span>Perhitungan:</span>
-                    <span>{cost.days} × Rp {activeEquipment.dailyRate.toLocaleString("id-ID")}</span>
-                  </div>
-                  <div className="border-t border-[#195B3E]/20 pt-1.5 flex justify-between items-center text-sm font-black text-[#195B3E]">
-                    <span>Total Estimasi Biaya:</span>
-                    <span>Rp {cost.total.toLocaleString("id-ID")}</span>
-                  </div>
-                </div>
-              )}
-
-              {/* Warning Info */}
-              <div className="flex items-start space-x-2 text-[11px] text-gray-500 bg-white p-3 rounded-lg border border-gray-200">
-                <Info className="w-4 h-4 text-[#195B3E] flex-shrink-0 mt-0.5" />
-                <span>
-                  Sistem akan memverifikasi ketersediaan unit fisik bebas bentrok jadwal. Pesanan yang disetujui admin dapat dilanjutkan ke pembayaran Midtrans Snap.
-                </span>
-              </div>
-
-              {/* Modal Buttons */}
-              <div className="flex justify-end space-x-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setActiveEquipment(null)}
-                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-xl text-xs font-bold hover:bg-gray-300 transition-colors"
-                >
-                  Tutup
-                </button>
-                <button
-                  type="submit"
-                  disabled={bookingLoading || cost.days === 0}
-                  className="px-6 py-2 bg-[#195B3E] text-white rounded-xl text-xs font-bold hover:bg-[#12432d] shadow transition-all disabled:opacity-40"
-                >
-                  {bookingLoading ? "Mengirim..." : "Ajukan Pemesanan"}
-                </button>
-              </div>
+              {days > 0 && <div className="flex justify-between border-y border-[#dce1d9] py-3 text-xs"><span>{days} hari × {rupiah(activeEquipment.dailyRate)}</span><strong>{rupiah(total)}</strong></div>}
+              {activeEquipment.isSample && <p className="flex gap-2 text-[10px] text-[#727a72]"><Info size={14} className="shrink-0" />Kartu ini adalah contoh visual. Hubungkan database untuk memesan unit sebenarnya.</p>}
+              <button disabled={bookingLoading || days < 1} className="button-primary w-full justify-center disabled:opacity-50">{bookingLoading ? "Mengirim…" : "Ajukan penyewaan"}</button>
+              {bookingMessage?.type === "success" && <p className="flex items-center gap-2 text-xs text-[#285b43]"><CheckCircle2 size={15} />Permintaan terkirim.</p>}
             </form>
           </div>
         </div>

@@ -1,82 +1,35 @@
 "use client";
 
-import React, { useState } from "react";
-import { ChevronDown, ShieldAlert, Clock, RefreshCw, AlertTriangle, FileText } from "lucide-react";
+import { useState } from "react";
+import { Minus, Plus } from "lucide-react";
+
+const questions = [
+  { title: "Bagaimana cara menghitung biaya sewa?", answer: "Biaya harian dikalikan lama pemakaian. Perhitungan memasukkan hari pengambilan dan pengembalian. Contoh: 12–14 November dihitung 3 hari." },
+  { title: "Kapan saya bisa melakukan pembayaran?", answer: "Pembayaran dilakukan setelah admin menyetujui pesanan dan memastikan alat tersedia pada tanggal yang dipilih." },
+  { title: "Bagaimana jika tanggal yang saya pilih penuh?", answer: "Tanggal yang sudah terpesan atau masuk jadwal perawatan tidak dapat dipilih. Silakan pilih tanggal lain yang tersedia." },
+  { title: "Di mana saya mengambil dan mengembalikan alat?", answer: "Pengambilan dan pengembalian dilakukan langsung di depot SewaAlat. Admin akan mencatat kondisi dan kelengkapan alat bersama penyewa." },
+];
 
 export default function RulesAccordion() {
-  const [openIdx, setOpenIdx] = useState<number | null>(0);
-
-  const rules = [
-    {
-      title: "Ketentuan Pengambilan Alat Fisik",
-      icon: Clock,
-      content:
-        "Pengambilan alat hanya dapat dilakukan setelah pembayaran berstatus BERHASIL (Settlement) pada sistem. Penyewa wajib membawa kartu identitas (KTP) asli dan mengonfirmasi kode QR/Order Code pada petugas depot.",
-    },
-    {
-      title: "Kebijakan Pembatalan Pesanan",
-      icon: RefreshCw,
-      content:
-        "Pembatalan pesanan sebelum pembayaran dilakukan diizinkan penuh tanpa biaya penalti. Jika pembayaran sudah dikonfirmasi, pembatalan mengikuti prosedur persetujuan pengelola depot.",
-    },
-    {
-      title: "Aturan Keterlambatan Pengembalian & Denda",
-      icon: AlertTriangle,
-      content:
-        "Pengembalian yang melewati batas waktu jatuh tempo dikenakan denda keterlambatan harian (dihitung per hari terlambat sesuai tarif dasar harian alat). Denda wajib dilunasi sebelum transaksi diselesaikan.",
-    },
-    {
-      title: "Pemeriksaan Kondisi Fisik & Kerusakan",
-      icon: ShieldAlert,
-      content:
-        "Kondisi fisik alat dicatat saat penyerahan (Kondisi Awal) dan dibandingkan saat pengembalian (Kondisi Akhir). Jika terjadi kerusakan akibat kelalaian operasional atau kelengkapan hilang, penyewa menyepakati biaya perbaikan yang dicatat oleh admin.",
-    },
-  ];
-
+  const [openIndex, setOpenIndex] = useState<number | null>(0);
   return (
-    <section id="ketentuan" className="py-20 bg-[#FAF5E9]">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-12 space-y-2">
-          <span className="text-xs font-black uppercase tracking-wider text-[#195B3E] bg-[#e8f5ee] px-3 py-1 rounded-full border border-[#195B3E]/20">
-            Kebijakan & Syarat
-          </span>
-          <h2 className="text-3xl font-black text-gray-900">Ketentuan Penyewaan Alat Tani</h2>
-          <p className="text-sm text-gray-600">
-            Informasi penting seputar batas waktu pembayaran, pembatalan, denda keterlambatan, dan pemeriksaan alat.
-          </p>
+    <section id="bantuan" className="border-t border-[#e3e5dd] bg-[#fbfaf6] px-6 py-14 sm:px-10 lg:px-0">
+      <div className="mx-auto grid max-w-[1280px] gap-8 lg:grid-cols-[0.7fr_1.3fr] lg:gap-20">
+        <div>
+          <p className="eyebrow text-[#426451]">Sebelum mulai</p>
+          <h2 className="font-display mt-3 text-[30px] leading-tight text-[#243b30]">Masih penasaran?</h2>
+          <p className="mt-3 max-w-[270px] text-[11px] leading-5 text-[#7b817a]">Kami merangkum hal yang paling sering ditanyakan penyewa.</p>
+          <a href="mailto:layanan@tanisewa.id" className="button-light mt-5 inline-flex">Hubungi tim kami <Plus size={12} /></a>
         </div>
-
-        <div className="space-y-4">
-          {rules.map((rule, idx) => {
-            const Icon = rule.icon;
-            const isOpen = openIdx === idx;
+        <div className="divide-y divide-[#dfe2da]">
+          {questions.map((item, index) => {
+            const isOpen = openIndex === index;
             return (
-              <div
-                key={idx}
-                className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm transition-all"
-              >
-                <button
-                  onClick={() => setOpenIdx(isOpen ? null : idx)}
-                  className="w-full px-6 py-4 flex items-center justify-between text-left font-bold text-gray-800 hover:bg-[#FAF5E9]/50 transition-colors"
-                >
-                  <div className="flex items-center space-x-3">
-                    <div className="w-8 h-8 rounded-lg bg-[#e8f5ee] text-[#195B3E] flex items-center justify-center flex-shrink-0">
-                      <Icon className="w-4 h-4" />
-                    </div>
-                    <span className="text-sm sm:text-base">{rule.title}</span>
-                  </div>
-                  <ChevronDown
-                    className={`w-5 h-5 text-gray-400 transition-transform duration-300 ${
-                      isOpen ? "rotate-180 text-[#195B3E]" : ""
-                    }`}
-                  />
+              <div key={item.title}>
+                <button aria-expanded={isOpen} onClick={() => setOpenIndex(isOpen ? null : index)} className="flex w-full items-center justify-between gap-4 py-4 text-left text-[11px] font-semibold text-[#34483b]">
+                  {item.title}{isOpen ? <Minus size={13} className="shrink-0 text-[#56725f]" /> : <Plus size={13} className="shrink-0 text-[#56725f]" />}
                 </button>
-
-                {isOpen && (
-                  <div className="px-6 pb-5 pt-1 text-xs sm:text-sm text-gray-600 border-t border-gray-100 leading-relaxed bg-[#FAF5E9]/20">
-                    {rule.content}
-                  </div>
-                )}
+                {isOpen && <p className="max-w-[620px] pb-4 text-[10px] leading-5 text-[#7b817a]">{item.answer}</p>}
               </div>
             );
           })}
