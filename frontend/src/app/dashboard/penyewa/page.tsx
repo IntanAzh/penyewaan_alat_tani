@@ -238,6 +238,29 @@ export default function PenyewaDashboard() {
                       </div>
                     </div>
 
+                    {r.rentalStatus === "ditolak" && r.rejectReason && (
+                      <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-800">
+                        <span className="block font-bold">Alasan pesanan ditolak</span>
+                        <p className="mt-1">{r.rejectReason}</p>
+                      </div>
+                    )}
+
+                    {Array.isArray(r.statusHistory) && r.statusHistory.length > 0 && (
+                      <details className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-xs">
+                        <summary className="cursor-pointer font-bold text-gray-700">Riwayat status pesanan ({r.statusHistory.length})</summary>
+                        <ol className="mt-3 space-y-3 border-l border-[#195B3E]/20 pl-4">
+                          {r.statusHistory.map((event: any) => (
+                            <li key={event.id} className="relative">
+                              <span className="absolute -left-[21px] top-1 h-2 w-2 rounded-full bg-[#52815b]" />
+                              <p className="font-bold text-gray-800">{event.toStatus.replaceAll("_", " ")}</p>
+                              <p className="mt-0.5 text-gray-500">{new Date(event.createdAt).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })}{event.actor?.name ? ` · ${event.actor.name}` : ""}</p>
+                              {event.reason && <p className="mt-1 text-gray-600">{event.reason}</p>}
+                            </li>
+                          ))}
+                        </ol>
+                      </details>
+                    )}
+
                     {/* Fine details if return record exists */}
                     {r.returnRecord && r.returnRecord.totalFine > 0 && (
                       <div className="p-3 bg-red-50 rounded-xl border border-red-200 text-xs space-y-1">

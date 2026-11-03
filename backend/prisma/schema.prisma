@@ -18,52 +18,54 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  rentals   Rental[]
+  rentals             Rental[]
+  rentalStatusActions RentalStatusHistory[] @relation("RentalStatusActor")
 }
 
 model Equipment {
-  id          String          @id @default(uuid())
+  id          String   @id @default(uuid())
   name        String
-  category    String          // e.g., "Traktor", "Mesin Tanam", "Pompa Air", "Panen"
+  category    String // e.g., "Traktor", "Mesin Tanam", "Pompa Air", "Panen"
   dailyRate   Float
   description String
   imageUrl    String
   imageUrls   Json?
-  isActive    Boolean         @default(true)
+  isActive    Boolean  @default(true)
   categoryId  String?
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   units       EquipmentUnit[]
   categoryRef EquipmentCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
   @@index([categoryId])
 }
 
 model EquipmentCategory {
-  id        String      @id @default(uuid())
-  name      String      @unique @db.VarChar(60)
-  isActive  Boolean     @default(true)
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
+  id         String      @id @default(uuid())
+  name       String      @unique @db.VarChar(60)
+  isActive   Boolean     @default(true)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
   equipments Equipment[]
 }
 
 model EquipmentUnit {
-  id              String      @id @default(uuid())
+  id              String   @id @default(uuid())
   equipmentId     String
-  unitCode        String      @unique // e.g. "UNT-TKT-001"
-  conditionStatus String      @default("aktif") // "aktif", "perawatan", "rusak", "nonaktif"
+  unitCode        String   @unique // e.g. "UNT-TKT-001"
+  conditionStatus String   @default("aktif") // "aktif", "perawatan", "rusak", "nonaktif"
   notes           String?
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
-  equipment       Equipment   @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
-  rentals         Rental[]
+  equipment Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+  rentals   Rental[]
 }
 
 model Rental {
-  id              String         @id @default(uuid())
-  orderCode       String         @unique // e.g. "ORD-20261002-001"
+  id              String   @id @default(uuid())
+  orderCode       String   @unique // e.g. "ORD-20261002-001"
   userId          String
   unitId          String
   startDate       DateTime
@@ -71,49 +73,63 @@ model Rental {
   durationDays    Int
   dailyRate       Float
   totalRentalFee  Float
-  rentalStatus    String         @default("menunggu_persetujuan") // "menunggu_persetujuan", "menunggu_pembayaran", "siap_diambil", "sedang_disewa", "pemeriksaan_pengembalian", "selesai"
-  exceptionStatus String?        // "ditolak", "dibatalkan", "kedaluwarsa"
+  rentalStatus    String   @default("menunggu_persetujuan") // "menunggu_persetujuan", "menunggu_pembayaran", "siap_diambil", "sedang_disewa", "pemeriksaan_pengembalian", "selesai"
+  exceptionStatus String? // "ditolak", "dibatalkan", "kedaluwarsa"
   rejectReason    String?
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
-  user            User           @relation(fields: [userId], references: [id])
-  unit            EquipmentUnit  @relation(fields: [unitId], references: [id])
-  payment         Payment?
-  returnRecord    ReturnRecord?
+  user          User                  @relation(fields: [userId], references: [id])
+  unit          EquipmentUnit         @relation(fields: [unitId], references: [id])
+  payment       Payment?
+  returnRecord  ReturnRecord?
+  requestKey    String?               @unique @db.VarChar(64)
+  statusHistory RentalStatusHistory[]
+}
+
+model RentalStatusHistory {
+  id         String   @id @default(uuid())
+  rentalId   String
+  actorId    String?
+  fromStatus String?
+  toStatus   String
+  reason     String?  @db.VarChar(500)
+  createdAt  DateTime @default(now())
+
+  rental Rental @relation(fields: [rentalId], references: [id], onDelete: Cascade)
+  actor  User?  @relation("RentalStatusActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([rentalId, createdAt])
 }
 
 model Payment {
-  id              String    @id @default(uuid())
-  rentalId        String    @unique
-  snapToken       String?
-  amount          Float
-  paymentStatus   String    @default("belum_dibayar") // "belum_dibayar", "tertunda", "berhasil", "gagal", "kedaluwarsa"
-  paymentMethod   String?
-  paidAt          DateTime?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id            String    @id @default(uuid())
+  rentalId      String    @unique
+  snapToken     String?
+  amount        Float
+  paymentStatus String    @default("belum_dibayar") // "belum_dibayar", "tertunda", "berhasil", "gagal", "kedaluwarsa"
+  paymentMethod String?
+  paidAt        DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
-  rental          Rental    @relation(fields: [rentalId], references: [id], onDelete: Cascade)
+  rental Rental @relation(fields: [rentalId], references: [id], onDelete: Cascade)
 }
 
 model ReturnRecord {
-  id                     String    @id @default(uuid())
-  rentalId               String    @unique
-  actualReturnDate       DateTime  @default(now())
-  lateDays               Int       @default(0)
-  lateFee                Float     @default(0)
-  damageFee              Float     @default(0)
-  totalFine              Float     @default(0)
-  finePaymentStatus      String    @default("belum_dibayar") // "belum_dibayar", "lunas"
-  initialConditionNotes  String
-  finalConditionNotes    String
-  adminNotes             String?
-  createdAt              DateTime  @default(now())
-  updatedAt              DateTime  @updatedAt
+  id                    String   @id @default(uuid())
+  rentalId              String   @unique
+  actualReturnDate      DateTime @default(now())
+  lateDays              Int      @default(0)
+  lateFee               Float    @default(0)
+  damageFee             Float    @default(0)
+  totalFine             Float    @default(0)
+  finePaymentStatus     String   @default("belum_dibayar") // "belum_dibayar", "lunas"
+  initialConditionNotes String
+  finalConditionNotes   String
+  adminNotes            String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 
-  rental                 Rental    @relation(fields: [rentalId], references: [id], onDelete: Cascade)
+  rental Rental @relation(fields: [rentalId], references: [id], onDelete: Cascade)
 }
-
-
-

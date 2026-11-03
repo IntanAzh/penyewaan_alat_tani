@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, CalendarDays, Check, CheckCircle2, ChevronLeft, ChevronRight, Clock3, Info, PackageCheck, ShieldCheck } from "lucide-react";
@@ -29,6 +29,8 @@ export default function EquipmentDetailPage() {
   const [endDate, setEndDate] = useState("");
   const [rangeAvailability, setRangeAvailability] = useState<number | null>(null);
   const [bookingLoading, setBookingLoading] = useState(false);
+  const [bookingSubmitted, setBookingSubmitted] = useState(false);
+  const bookingRequestKey = useRef<string | null>(null);
   const [bookingNotice, setBookingNotice] = useState<{ kind: "success" | "error"; text: string } | null>(null);
 
   useEffect(() => {
@@ -84,18 +86,23 @@ export default function EquipmentDetailPage() {
   const selectCalendarDate = (date: string) => {
     if (date < todayKey() || (calendarByDate.get(date)?.availableUnitsCount ?? 0) < 1) return;
     setBookingNotice(null);
+    setBookingSubmitted(false);
+    bookingRequestKey.current = null;
     if (!startDate || endDate || date < startDate) { setStartDate(date); setEndDate(""); setRangeAvailability(null); return; }
     setEndDate(date);
   };
 
   const submitBooking = async () => {
-    if (!equipment || !startDate || !endDate || durationDays < 1 || rangeAvailability === null || rangeAvailability < 1) return;
+    if (bookingSubmitted || !equipment || !startDate || !endDate || durationDays < 1 || rangeAvailability === null || rangeAvailability < 1) return;
     if (!user) { setAuthMode("login"); setAuthModalOpen(true); return; }
+    if (user.role !== "penyewa") { setBookingNotice({ kind: "error", text: "Akun Admin tidak dapat mengajukan pesanan sewa." }); return; }
+    bookingRequestKey.current ??= crypto.randomUUID();
     setBookingLoading(true); setBookingNotice(null);
     try {
-      const response = await fetch("/api/rentals", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ equipmentId: equipment.id, startDateStr: startDate, endDateStr: endDate }) });
+      const response = await fetch("/api/rentals", { method: "POST", headers: { "Content-Type": "application/json", "Idempotency-Key": bookingRequestKey.current }, body: JSON.stringify({ equipmentId: equipment.id, startDateStr: startDate, endDateStr: endDate }) });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "Permintaan sewa gagal dikirim.");
+      setBookingSubmitted(true);
       setBookingNotice({ kind: "success", text: `Permintaan ${result.rental.orderCode} berhasil dikirim. Admin akan memeriksa pesanan Anda.` });
       setRangeAvailability(Math.max(0, rangeAvailability - 1));
     } catch (error) { setBookingNotice({ kind: "error", text: error instanceof Error ? error.message : "Permintaan sewa gagal dikirim." }); }
@@ -178,7 +185,8 @@ export default function EquipmentDetailPage() {
             {startDate && endDate && rangeAvailability === null && <p className="mb-3 text-[9px] text-[#7b817a]">Memeriksa ketersediaan untuk seluruh rentang…</p>}
             {startDate && endDate && rangeAvailability === 0 && <p role="alert" className="mb-3 rounded-[3px] bg-[#f7e8e5] p-2.5 text-[9px] leading-4 text-[#9b5146]">Tidak ada unit yang tersedia untuk seluruh rentang ini. Pilih tanggal lain.</p>}
             {bookingNotice && <p role="status" className={`mb-3 rounded-[3px] p-2.5 text-[9px] leading-4 ${bookingNotice.kind === "success" ? "bg-[#edf3e9] text-[#285b43]" : "bg-[#f7e8e5] text-[#9b5146]"}`}>{bookingNotice.text}</p>}
-            <button type="button" onClick={submitBooking} disabled={!startDate || !endDate || durationDays < 1 || rangeAvailability === null || rangeAvailability < 1 || bookingLoading} className="button-primary w-full justify-center disabled:cursor-not-allowed disabled:opacity-45">{bookingLoading ? "Mengirim permintaan…" : user ? "Ajukan permintaan sewa" : "Masuk untuk menyewa"}<ArrowRight size={13} /></button>
+            {bookingSubmitted && <Link href="/dashboard/penyewa" className="mb-3 inline-flex w-full justify-center rounded-sm border border-[#dce1d9] px-3 py-2 text-[10px] font-semibold text-[#285b43] hover:bg-[#edf3e9]">Lihat status pesanan <ArrowRight size={12} className="ml-1" /></Link>}
+            <button type="button" onClick={submitBooking} disabled={!startDate || !endDate || durationDays < 1 || rangeAvailability === null || rangeAvailability < 1 || bookingLoading || bookingSubmitted} className="button-primary w-full justify-center disabled:cursor-not-allowed disabled:opacity-45">{bookingLoading ? "Mengirim permintaan…" : bookingSubmitted ? "Permintaan sudah diajukan" : user ? "Ajukan permintaan sewa" : "Masuk untuk menyewa"}<ArrowRight size={13} /></button>
             <p className="mt-2 flex items-start gap-1.5 text-[8px] leading-4 text-[#7b817a]"><ShieldCheck size={12} className="mt-0.5 shrink-0" /> Permintaan akan dikonfirmasi Admin sebelum pembayaran.</p>
           </aside>
         </section>

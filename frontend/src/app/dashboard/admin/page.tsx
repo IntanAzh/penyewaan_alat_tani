@@ -79,11 +79,11 @@ export default function AdminDashboard() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action, rejectReason }),
       });
-      if (res.ok) {
-        fetchAdminData();
-      }
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Pesanan gagal diproses.");
+      await fetchAdminData();
     } catch (err: any) {
-      alert(err.message);
+      alert(err instanceof Error ? err.message : "Pesanan gagal diproses.");
     }
   };
 
