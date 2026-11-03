@@ -2,21 +2,25 @@
 
 Aplikasi penyewaan alat pertanian dengan React (Next.js) sebagai frontend dan Node.js (Next.js API routes) sebagai backend. Kedua aplikasi berjalan sebagai proses terpisah.
 
-## Struktur
+## Struktur Direktori
 
-- `frontend/` — halaman React, komponen, konteks, dan stylesheet.
-- `backend/` — API Node.js, autentikasi, integrasi Midtrans, Prisma schema, dan skrip database.
-- `docs/` — PRD, requirement, dan dokumentasi modul.
+- `frontend/` — Halaman React (Next.js App Router), komponen visual, konteks autentikasi, dan konfigurasi Tailwind CSS.
+- `backend/` — API routes Node.js, otentikasi sesi scrypt, integrasi Midtrans Snap, Prisma ORM schema, dan migrasi MySQL.
+- `docs/` — PRD, baseline requirement sistem, dan dokumentasi modul.
 
-## Menjalankan di Windows
+## Panduan Menjalankan Proyek (Windows & Laragon)
 
-1. Jalankan MySQL Laragon. Konfigurasi lokal yang terdeteksi memakai port `3307`.
-2. Buat database `tanisewa` melalui phpMyAdmin dengan mengimpor `backend/prisma/phpmyadmin-setup.sql`.
-3. Salin `.env.example` menjadi satu file `.env` di root proyek. Frontend, backend, dan Prisma membaca konfigurasi dari file tersebut. Isi password MySQL; password dalam URL harus di-URL-encode jika memiliki karakter khusus.
-4. Jalankan `npm install`.
-5. Jalankan `npm run db:push` untuk membuat tabel dari Prisma schema.
-6. Jalankan `npm run dev`. Frontend tersedia di `http://localhost:3000`, backend di `http://localhost:4001`. Frontend meneruskan `/api/*` ke backend.
+1. Jalankan MySQL di Laragon (port default lokal: `3306`).
+2. Pastikan database `tanisewa` sudah dibuat (atau jalankan script `backend/prisma/phpmyadmin-setup.sql`).
+3. Salin `.env.example` menjadi file tunggal `.env` di root proyek. Frontend, backend, dan Prisma membaca konfigurasi terpusat dari file ini:
+   ```env
+   DATABASE_URL="mysql://root:@127.0.0.1:3306/tanisewa"
+   ```
+4. Jalankan `npm install` (jika dependensi belum terpasang).
+5. Jalankan `npm run db:push` untuk menyinkronkan tabel ke database MySQL.
+6. Jalankan `npm run dev` untuk menyalakan kedua server secara bersamaan:
+   - **Frontend**: `http://localhost:3000`
+   - **Backend**: `http://localhost:4001` (Frontend meneruskan rute `/api/*` secara otomatis ke backend).
 
-`backend/prisma/dev.db` adalah database SQLite lama dan disimpan sebagai cadangan; belum dipindahkan ke MySQL. Setelah kredensial MySQL tersedia, data dapat dimigrasikan tanpa menjalankan seed yang menghapus isi database.
-
-Seed demo bersifat destruktif terhadap data operasional yang sudah ada. Jalankan hanya pada database pengembangan yang memang boleh direset.
+> [!NOTE]
+> Database utama telah menggunakan MySQL. Seed demo bersifat destruktif terhadap data operasional; jalankan hanya jika ingin mereset data contoh.

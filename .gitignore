@@ -13,3 +13,4 @@ coverage/
 **/*.db
 **/*.db-journal
 npm-debug.log*
+*.tsbuildinfo

@@ -18,7 +18,14 @@ async function main() {
   await prisma.rental.deleteMany({});
   await prisma.equipmentUnit.deleteMany({});
   await prisma.equipment.deleteMany({});
+  await prisma.equipmentCategory.deleteMany({});
   await prisma.user.deleteMany({});
+
+  // 1.1 Create Equipment Categories
+  const catTraktor = await prisma.equipmentCategory.create({ data: { name: 'Traktor' } });
+  const catTanam = await prisma.equipmentCategory.create({ data: { name: 'Mesin Tanam' } });
+  const catPompa = await prisma.equipmentCategory.create({ data: { name: 'Pompa Air' } });
+  const catPanen = await prisma.equipmentCategory.create({ data: { name: 'Panen' } });
 
   // 2. Create Users
   const admin = await prisma.user.create({
@@ -56,6 +63,7 @@ async function main() {
     data: {
       name: 'Traktor Roda 4 Kubota M9540',
       category: 'Traktor',
+      categoryId: catTraktor.id,
       dailyRate: 450000,
       description: 'Traktor pembajak sawah 4WD 95 HP cocok untuk lahan luas, dilengkapi pisau bajak rotari standar industri.',
       imageUrl: 'https://images.unsplash.com/photo-1592982537447-7440770cbfc9?auto=format&fit=crop&w=800&q=80',
@@ -74,6 +82,7 @@ async function main() {
     data: {
       name: 'Mesin Tanam Padi Yanmar VP6',
       category: 'Mesin Tanam',
+      categoryId: catTanam.id,
       dailyRate: 280000,
       description: 'Mesin penanam bibit padi otomatis 6 baris efisien, mempercepat proses tanam hingga 5x lipat dibanding manual.',
       imageUrl: 'https://images.unsplash.com/photo-1586771107445-d3ca888129ff?auto=format&fit=crop&w=800&q=80',
@@ -91,6 +100,7 @@ async function main() {
     data: {
       name: 'Pompa Air Diesel Honda 3 Inch',
       category: 'Pompa Air',
+      categoryId: catPompa.id,
       dailyRate: 95000,
       description: 'Pompa irigasi pertanian tekanan tinggi debit air 1.000 liter/menit, hemat bahan bakar solar/diesel.',
       imageUrl: 'https://images.unsplash.com/photo-1615811361523-6bd03d7748e7?auto=format&fit=crop&w=800&q=80',
@@ -109,6 +119,7 @@ async function main() {
     data: {
       name: 'Combine Harvester Kubota DC-70 Plus',
       category: 'Panen',
+      categoryId: catPanen.id,
       dailyRate: 650000,
       description: 'Mesin pemanen dan pengering gabah sekaligus, memotong, merontokkan, dan membersihkan bulir padi secara serentak.',
       imageUrl: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=800&q=80',
@@ -125,6 +136,7 @@ async function main() {
     data: {
       name: 'Cultivator Traktor Tangan Quick C3000',
       category: 'Traktor',
+      categoryId: catTraktor.id,
       dailyRate: 175000,
       description: 'Traktor tangan pencacah tanah dan pembuatan bedengan kebun hortikultura, lincah di lahan sempit.',
       imageUrl: 'https://images.unsplash.com/photo-1589923188900-85dae523342b?auto=format&fit=crop&w=800&q=80',
@@ -222,8 +234,8 @@ async function main() {
   });
 
   console.log('Seeding completed successfully!');
-  console.log('Admin Account: admin@tanisewa.id / admin123');
-  console.log('User Account: budi@gmail.com / user123');
+  console.log(`Admin Account: admin@tanisewa.id / ${adminPassword}`);
+  console.log(`User Account: budi@gmail.com / ${demoPassword}`);
 }
 
 main()

@@ -28,10 +28,24 @@ model Equipment {
   dailyRate   Float
   description String
   imageUrl    String
+  imageUrls   Json?
+  isActive    Boolean         @default(true)
+  categoryId  String?
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
 
   units       EquipmentUnit[]
+  categoryRef EquipmentCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  @@index([categoryId])
+}
+
+model EquipmentCategory {
+  id        String      @id @default(uuid())
+  name      String      @unique @db.VarChar(60)
+  isActive  Boolean     @default(true)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  equipments Equipment[]
 }
 
 model EquipmentUnit {

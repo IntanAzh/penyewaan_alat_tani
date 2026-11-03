@@ -61,7 +61,7 @@ export async function POST(
       },
     });
 
-    // Update rental status
+    // Update rental status and unit condition
     const newRentalStatus = totalFine > 0 ? "pemeriksaan_pengembalian" : "selesai";
 
     const updatedRental = await prisma.rental.update({
@@ -70,6 +70,13 @@ export async function POST(
         rentalStatus: newRentalStatus,
       },
     });
+
+    if (parsedDamageFee > 0 && rental.unitId) {
+      await prisma.equipmentUnit.update({
+        where: { id: rental.unitId },
+        data: { conditionStatus: "perawatan", notes: finalConditionNotes || "Perlu perawatan pasca pengembalian." },
+      });
+    }
 
     return NextResponse.json({
       message: totalFine > 0 

@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { requireSessionUser } from "@/lib/auth";
+import { parseDateOnlyUTC, utcToday } from "@/lib/dateOnly";
 
-const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
+export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
@@ -38,22 +39,21 @@ export async function POST(req: Request) {
     const equipmentId = typeof body.equipmentId === "string" ? body.equipmentId : "";
     const startDateStr = typeof body.startDateStr === "string" ? body.startDateStr : "";
     const endDateStr = typeof body.endDateStr === "string" ? body.endDateStr : "";
-    if (!equipmentId || !DATE_ONLY.test(startDateStr) || !DATE_ONLY.test(endDateStr)) {
+    if (!equipmentId || !startDateStr || !endDateStr) {
       return NextResponse.json({ error: "Formulir pemesanan belum lengkap atau tanggal tidak valid." }, { status: 400 });
     }
 
-    const start = new Date(`${startDateStr}T00:00:00.000Z`);
-    const end = new Date(`${endDateStr}T00:00:00.000Z`);
-    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || start > end) {
+    const start = parseDateOnlyUTC(startDateStr);
+    const end = parseDateOnlyUTC(endDateStr);
+    if (!start || !end || start > end) {
       return NextResponse.json({ error: "Rentang tanggal sewa tidak valid." }, { status: 400 });
     }
-    const today = new Date();
-    const todayUtc = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
-    if (start < todayUtc) return NextResponse.json({ error: "Tanggal mulai tidak boleh di masa lalu." }, { status: 400 });
+    if (start < utcToday()) return NextResponse.json({ error: "Tanggal mulai tidak boleh di masa lalu." }, { status: 400 });
     const durationDays = Math.floor((end.getTime() - start.getTime()) / 86_400_000) + 1;
 
     const equipment = await prisma.equipment.findUnique({ where: { id: equipmentId }, include: { units: true } });
     if (!equipment) return NextResponse.json({ error: "Alat tidak ditemukan." }, { status: 404 });
+    if (!equipment.isActive) return NextResponse.json({ error: "Alat sedang tidak tersedia untuk pesanan baru." }, { status: 409 });
 
     const activeUnits = equipment.units.filter((unit) => unit.conditionStatus === "aktif");
     let selectedUnit = null;
@@ -61,9 +61,12 @@ export async function POST(req: Request) {
       const overlapping = await prisma.rental.findFirst({
         where: {
           unitId: unit.id,
-          rentalStatus: { notIn: ["ditolak", "dibatalkan", "kedaluwarsa"] },
-          startDate: { lte: end },
-          endDate: { gte: start },
+          rentalStatus: { notIn: ["ditolak", "dibatalkan", "kedaluwarsa", "selesai"] },
+          exceptionStatus: null,
+          OR: [
+            { startDate: { lte: end }, endDate: { gte: start } },
+            { rentalStatus: { in: ["sedang_disewa", "pemeriksaan_pengembalian"] } },
+          ],
         },
         select: { id: true },
       });
