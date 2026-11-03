@@ -305,8 +305,8 @@ export default function PenyewaDashboard() {
 
       {/* Invoice Modal */}
       {selectedRental && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full overflow-hidden shadow-2xl border border-gray-200">
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto overscroll-contain bg-black/60 p-4 backdrop-blur-sm sm:items-center">
+          <div className="my-auto max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto overscroll-contain rounded-2xl border border-gray-200 bg-white shadow-2xl">
             <div className="bg-[#195B3E] text-white p-6 flex justify-between items-center">
               <div>
                 <h3 className="text-lg font-black">Invoice Bukti Sewa</h3>

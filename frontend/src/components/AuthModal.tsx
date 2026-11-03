@@ -62,10 +62,10 @@ export default function AuthModal() {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-[#10291f]/55 backdrop-blur-sm p-4 animate-fade-in"
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto overscroll-contain bg-[#10291f]/55 p-4 backdrop-blur-sm animate-fade-in sm:items-center"
       onMouseDown={(event) => { if (event.target === event.currentTarget && !loading) setAuthModalOpen(false); }}
     >
-      <section role="dialog" aria-modal="true" aria-labelledby="auth-title" className="relative bg-[#FAF5E9] rounded-[26px] shadow-2xl max-w-[440px] w-full overflow-hidden border border-[#195B3E]/15">
+      <section role="dialog" aria-modal="true" aria-labelledby="auth-title" className="relative my-auto max-h-[calc(100dvh-2rem)] w-full max-w-[440px] overflow-y-auto overscroll-contain rounded-[26px] border border-[#195B3E]/15 bg-[#FAF5E9] shadow-2xl">
         <div className="absolute inset-x-0 top-0 h-1.5 bg-[#B8CC83]" />
         <button
           type="button"
@@ -77,7 +77,7 @@ export default function AuthModal() {
           <X className="w-5 h-5" />
         </button>
 
-        <div className="px-8 pt-9 pb-5">
+        <div className="px-5 pb-5 pt-9 sm:px-8">
           <div className="flex items-center gap-3 mb-6">
             <div className="w-11 h-11 rounded-2xl bg-[#195B3E] text-[#FAF5E9] grid place-items-center"><Leaf className="w-5 h-5" /></div>
             <div><p className="text-[10px] uppercase tracking-[.18em] text-[#66806a] font-bold">TaniSewa</p><p className="text-xs text-[#748174]">Penyewaan alat pertanian</p></div>
@@ -91,7 +91,7 @@ export default function AuthModal() {
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="px-8 pb-8 space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4 px-5 pb-6 sm:px-8 sm:pb-8">
           {errorMsg && <div role="alert" className="p-3 bg-[#fae9e3] border border-[#e6b7a9] text-[#984436] text-sm font-medium rounded-xl">{errorMsg}</div>}
 
           {authMode === "register" && <>

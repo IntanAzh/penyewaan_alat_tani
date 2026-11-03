@@ -762,10 +762,10 @@ export default function AdminDashboard() {
           <div className="p-6 border-b border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
             
             {/* View Switcher Tabs */}
-            <div className="flex bg-[#FAF5E9] p-1 rounded-2xl w-fit border border-[#195B3E]/10">
+            <div className="grid w-full grid-cols-2 rounded-2xl border border-[#195B3E]/10 bg-[#FAF5E9] p-1 sm:w-fit">
               <button
                 onClick={() => setActiveTab("transaksi")}
-                className={`px-4 py-2 rounded-xl text-xs font-black transition-all ${
+                className={`rounded-xl px-2 py-2 text-[10px] font-black leading-tight transition-all sm:px-4 sm:text-xs ${
                   activeTab === "transaksi"
                     ? "bg-[#195B3E] text-white shadow-sm"
                     : "text-gray-600 hover:text-gray-900"
@@ -775,7 +775,7 @@ export default function AdminDashboard() {
               </button>
               <button
                 onClick={() => setActiveTab("katalog")}
-                className={`px-4 py-2 rounded-xl text-xs font-black transition-all ${
+                className={`rounded-xl px-2 py-2 text-[10px] font-black leading-tight transition-all sm:px-4 sm:text-xs ${
                   activeTab === "katalog"
                     ? "bg-[#195B3E] text-white shadow-sm"
                     : "text-gray-600 hover:text-gray-900"
@@ -822,7 +822,42 @@ export default function AdminDashboard() {
 
           {/* Table Content */}
           {activeTab === "transaksi" ? (
-            <div className="overflow-x-auto">
+            <div className="space-y-3 p-4 md:hidden">
+              {filteredRentals.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-gray-300 px-4 py-10 text-center text-xs text-gray-500">Tidak ada transaksi yang cocok.</div>
+              ) : filteredRentals.map((r) => {
+                const pending = r.rentalStatus === "menunggu_persetujuan";
+                const paidForHandover = r.rentalStatus === "siap_diambil" || (r.rentalStatus === "menunggu_pembayaran" && r.payment?.paymentStatus === "berhasil");
+                const rented = r.rentalStatus === "sedang_disewa";
+                const inspecting = r.rentalStatus === "pemeriksaan_pengembalian";
+                const completed = r.rentalStatus === "selesai";
+                return (
+                  <article key={r.id} className="space-y-3 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div className="min-w-0"><p className="break-all font-mono text-[10px] font-bold text-gray-500">{r.orderCode}</p><h3 className="mt-1 break-words text-sm font-black text-gray-900">{r.unit?.equipment?.name || "Alat Tani"}</h3><p className="text-[11px] text-gray-500">{r.user?.name} · {r.user?.phone}</p></div>
+                      <span className="shrink-0 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-bold text-emerald-800">{r.rentalStatus.replaceAll("_", " ")}</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 border-y border-gray-100 py-3 text-[11px]">
+                      <div><span className="block text-gray-400">Unit fisik</span><strong className="break-all text-gray-800">{r.unit?.unitCode}</strong></div>
+                      <div><span className="block text-gray-400">Total biaya</span><strong className="text-gray-800">Rp {(r.totalRentalFee || 0).toLocaleString("id-ID")}</strong></div>
+                      <div><span className="block text-gray-400">Jadwal sewa</span><strong className="text-gray-800">{new Date(r.startDate).toLocaleDateString("id-ID")} – {new Date(r.endDate).toLocaleDateString("id-ID")}</strong></div>
+                      <div><span className="block text-gray-400">Pembayaran</span><strong className="text-gray-800">{r.payment?.paymentStatus || "belum dibayar"}</strong></div>
+                    </div>
+                    <div className="grid grid-cols-1 gap-2">
+                      {pending && <><button onClick={() => handleApprove(r.id, "approve")} className="w-full rounded-lg bg-[#195B3E] px-3 py-2.5 text-xs font-bold text-white">Setujui pesanan</button><button onClick={() => handleApprove(r.id, "reject")} className="w-full rounded-lg bg-red-50 px-3 py-2.5 text-xs font-bold text-red-700">Tolak pesanan</button></>}
+                      {paidForHandover && <button onClick={() => setHandoverModalRental(r)} className="w-full rounded-lg bg-purple-700 px-3 py-2.5 text-xs font-bold text-white">Serah terima unit</button>}
+                      {rented && <button onClick={() => setReturnModalRental(r)} className="w-full rounded-lg bg-amber-600 px-3 py-2.5 text-xs font-bold text-white">Proses pengembalian</button>}
+                      {inspecting && r.returnRecord?.finePaymentStatus !== "lunas" && <button onClick={() => handlePayFine(r.id)} className="w-full rounded-lg bg-blue-600 px-3 py-2.5 text-xs font-bold text-white">Lunasi denda · Rp {(r.returnRecord?.totalFine || 0).toLocaleString("id-ID")}</button>}
+                      {completed && <p className="text-center text-xs font-bold text-emerald-700">Transaksi tuntas</p>}
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          ) : null}
+
+          {activeTab === "transaksi" ? (
+            <div className="hidden overflow-x-auto md:block">
               <table className="w-full text-left text-xs">
                 <thead className="bg-[#FAF5E9]/60 text-[#195B3E] uppercase font-bold text-[10px] tracking-wider border-b border-gray-200">
                   <tr>
@@ -1059,8 +1094,8 @@ export default function AdminDashboard() {
 
       {/* Handover Modal */}
       {handoverModalRental && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full overflow-hidden shadow-2xl p-6 space-y-4 animate-in fade-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto overscroll-contain bg-black/60 p-4 backdrop-blur-sm sm:items-center">
+          <div className="my-auto max-h-[calc(100dvh-2rem)] w-full max-w-md space-y-4 overflow-y-auto overscroll-contain rounded-3xl bg-white p-5 shadow-2xl sm:p-6">
             <div className="flex justify-between items-start">
               <div>
                 <h3 className="text-lg font-black text-gray-900">Serah Terima Unit Fisik</h3>
@@ -1115,8 +1150,8 @@ export default function AdminDashboard() {
 
       {/* Return Inspection Modal */}
       {returnModalRental && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full overflow-hidden shadow-2xl p-6 space-y-4 animate-in fade-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto overscroll-contain bg-black/60 p-4 backdrop-blur-sm sm:items-center">
+          <div className="my-auto max-h-[calc(100dvh-2rem)] w-full max-w-md space-y-4 overflow-y-auto overscroll-contain rounded-3xl bg-white p-5 shadow-2xl sm:p-6">
             <div className="flex justify-between items-start">
               <div>
                 <h3 className="text-lg font-black text-gray-900">Pemeriksaan Pengembalian Alat</h3>
@@ -1189,8 +1224,8 @@ export default function AdminDashboard() {
 
       {/* Add New Equipment Modal */}
       {newEquipModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full overflow-hidden shadow-2xl p-6 space-y-4 animate-in fade-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto overscroll-contain bg-black/60 p-4 backdrop-blur-sm sm:items-center">
+          <div className="my-auto max-h-[calc(100dvh-2rem)] w-full max-w-md space-y-4 overflow-y-auto overscroll-contain rounded-3xl bg-white p-5 shadow-2xl sm:p-6">
             <div className="flex justify-between items-start">
               <div>
                 <h3 className="text-lg font-black text-gray-900">Tambah Master Alat Baru</h3>
