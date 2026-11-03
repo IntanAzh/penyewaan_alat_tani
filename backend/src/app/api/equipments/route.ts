@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireSessionUser } from "@/lib/auth";
 import { parseDateOnlyUTC, utcToday } from "@/lib/dateOnly";
+import { expireOverduePayments } from "@/lib/paymentExpiry";
 
 const validImage = (value: string) => value.startsWith("/") || /^https?:\/\//i.test(value);
 
@@ -9,6 +10,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
   try {
+    await expireOverduePayments();
     const { searchParams } = new URL(req.url);
     const category = searchParams.get("category");
     const search = searchParams.get("search")?.trim();
@@ -32,9 +34,10 @@ export async function GET(req: Request) {
     if (equipmentId) where.id = equipmentId;
     if (category && category !== "Semua") where.category = category;
     if (search) where.OR = [{ name: { contains: search } }, { description: { contains: search } }];
-    const equipments = await prisma.equipment.findMany({ where, include: { units: true }, orderBy: { createdAt: "desc" } });
+    const equipments = await prisma.equipment.findMany({ where, include: { units: { include: { maintenanceSchedules: { where: { status: "terjadwal" }, orderBy: { startDate: "asc" } } } } }, orderBy: { createdAt: "desc" } });
     const activeUnitIds = equipments.flatMap((item) => item.isActive ? item.units.filter((unit) => unit.conditionStatus === "aktif").map((unit) => unit.id) : []);
     const blockedUnitIds = new Set<string>();
+    const maintenanceUnitIds = new Set<string>();
     if (startDate && endDate && activeUnitIds.length) {
       const rentals = await prisma.rental.findMany({
         where: {
@@ -49,12 +52,20 @@ export async function GET(req: Request) {
         select: { unitId: true },
         distinct: ["unitId"],
       });
-      for (const rental of rentals) blockedUnitIds.add(rental.unitId);
+      for (const rental of rentals) if (rental.unitId) blockedUnitIds.add(rental.unitId);
+      const schedules = await prisma.maintenanceSchedule.findMany({
+        where: { unitId: { in: activeUnitIds }, status: "terjadwal", startDate: { lte: endDate }, endDate: { gte: startDate } },
+        select: { unitId: true }, distinct: ["unitId"],
+      });
+      for (const schedule of schedules) maintenanceUnitIds.add(schedule.unitId);
     }
     return NextResponse.json(equipments.map((item) => {
       const activeUnits = item.isActive ? item.units.filter((unit) => unit.conditionStatus === "aktif") : [];
-      const blockedCount = startDate && endDate ? activeUnits.filter((unit) => blockedUnitIds.has(unit.id)).length : 0;
-      return { ...item, totalActiveUnits: activeUnits.length, blockedUnitsCount: blockedCount, availableUnitsCount: Math.max(0, activeUnits.length - blockedCount) };
+      const blockedCount = startDate && endDate ? activeUnits.filter((unit) => blockedUnitIds.has(unit.id) || maintenanceUnitIds.has(unit.id)).length : 0;
+      const publicUnits = canSeeInactive
+        ? item.units
+        : item.units.map((unit) => ({ id: unit.id, conditionStatus: unit.conditionStatus }));
+      return { ...item, units: publicUnits, totalActiveUnits: activeUnits.length, blockedUnitsCount: blockedCount, availableUnitsCount: Math.max(0, activeUnits.length - blockedCount) };
     }), { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     console.error("Get equipment failed.", error instanceof Error ? error.message : "Unknown error");

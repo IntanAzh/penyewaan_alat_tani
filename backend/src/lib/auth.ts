@@ -1,4 +1,4 @@
-import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
+import { createHmac, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
@@ -8,7 +8,7 @@ const SESSION_TTL_SECONDS = 60 * 60 * 24 * 7;
 export type UserRole = "admin" | "penyewa";
 export type SessionUser = { id: string; name: string; email: string; phone: string; role: UserRole };
 
-type SessionPayload = { sub: string; exp: number };
+type SessionPayload = { sub: string; sid: string; exp: number };
 
 type AuthGlobal = typeof globalThis & { __tanisewaDevSessionSecret?: string };
 const authGlobal = globalThis as AuthGlobal;
@@ -27,8 +27,8 @@ function sign(value: string): string {
   return createHmac("sha256", sessionSecret()).update(value).digest("base64url");
 }
 
-export function createSessionToken(userId: string): string {
-  const payload: SessionPayload = { sub: userId, exp: Math.floor(Date.now() / 1000) + SESSION_TTL_SECONDS };
+export function createSessionToken(userId: string, sessionId: string): string {
+  const payload: SessionPayload = { sub: userId, sid: sessionId, exp: Math.floor(Date.now() / 1000) + SESSION_TTL_SECONDS };
   const encoded = Buffer.from(JSON.stringify(payload)).toString("base64url");
   return `${encoded}.${sign(encoded)}`;
 }
@@ -43,7 +43,7 @@ function verifySessionToken(token: string): SessionPayload | null {
 
   try {
     const payload = JSON.parse(Buffer.from(encoded, "base64url").toString("utf8")) as SessionPayload;
-    if (typeof payload.sub !== "string" || !Number.isFinite(payload.exp) || payload.exp <= Date.now() / 1000) return null;
+    if (typeof payload.sub !== "string" || typeof payload.sid !== "string" || !Number.isFinite(payload.exp) || payload.exp <= Date.now() / 1000) return null;
     return payload;
   } catch {
     return null;
@@ -52,7 +52,9 @@ function verifySessionToken(token: string): SessionPayload | null {
 
 export async function setSessionCookie(userId: string): Promise<void> {
   const store = await cookies();
-  store.set(SESSION_COOKIE, createSessionToken(userId), {
+  const expiresAt = new Date(Date.now() + SESSION_TTL_SECONDS * 1000);
+  const session = await prisma.userSession.create({ data: { id: randomUUID(), userId, expiresAt } });
+  store.set(SESSION_COOKIE, createSessionToken(userId, session.id), {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
@@ -63,6 +65,11 @@ export async function setSessionCookie(userId: string): Promise<void> {
 
 export async function clearSessionCookie(): Promise<void> {
   const store = await cookies();
+  const token = store.get(SESSION_COOKIE)?.value;
+  const payload = token ? verifySessionToken(token) : null;
+  if (payload) {
+    await prisma.userSession.updateMany({ where: { id: payload.sid, userId: payload.sub, revokedAt: null }, data: { revokedAt: new Date() } });
+  }
   store.set(SESSION_COOKIE, "", { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/", maxAge: 0 });
 }
 
@@ -72,10 +79,12 @@ export async function getSessionUser(): Promise<SessionUser | null> {
   const payload = verifySessionToken(token);
   if (!payload) return null;
 
-  const user = await prisma.user.findUnique({
-    where: { id: payload.sub },
-    select: { id: true, name: true, email: true, phone: true, role: true, isActive: true },
+  const session = await prisma.userSession.findUnique({
+    where: { id: payload.sid },
+    include: { user: { select: { id: true, name: true, email: true, phone: true, role: true, isActive: true } } },
   });
+  const user = session?.user;
+  if (!session || session.userId !== payload.sub || session.revokedAt || session.expiresAt.getTime() <= Date.now()) return null;
   if (!user || !user.isActive || (user.role !== "admin" && user.role !== "penyewa")) return null;
   return { id: user.id, name: user.name, email: user.email, phone: user.phone, role: user.role };
 }

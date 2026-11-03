@@ -20,13 +20,14 @@ model User {
 
   rentals             Rental[]
   rentalStatusActions RentalStatusHistory[] @relation("RentalStatusActor")
+  sessions            UserSession[]
 }
 
 model Equipment {
   id          String   @id @default(uuid())
   name        String
   category    String // e.g., "Traktor", "Mesin Tanam", "Pompa Air", "Panen"
-  dailyRate   Float
+  dailyRate   Int
   description String
   imageUrl    String
   imageUrls   Json?
@@ -36,6 +37,7 @@ model Equipment {
   updatedAt   DateTime @updatedAt
 
   units       EquipmentUnit[]
+  rentals     Rental[]
   categoryRef EquipmentCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 
   @@index([categoryId])
@@ -59,20 +61,22 @@ model EquipmentUnit {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  equipment Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
-  rentals   Rental[]
+  equipment            Equipment             @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+  rentals              Rental[]
+  maintenanceSchedules MaintenanceSchedule[]
 }
 
 model Rental {
   id              String   @id @default(uuid())
   orderCode       String   @unique // e.g. "ORD-20261002-001"
   userId          String
-  unitId          String
+  equipmentId     String?
+  unitId          String?
   startDate       DateTime
   endDate         DateTime
   durationDays    Int
-  dailyRate       Float
-  totalRentalFee  Float
+  dailyRate       Int
+  totalRentalFee  Int
   rentalStatus    String   @default("menunggu_persetujuan") // "menunggu_persetujuan", "menunggu_pembayaran", "siap_diambil", "sedang_disewa", "pemeriksaan_pengembalian", "selesai"
   exceptionStatus String? // "ditolak", "dibatalkan", "kedaluwarsa"
   rejectReason    String?
@@ -80,7 +84,8 @@ model Rental {
   updatedAt       DateTime @updatedAt
 
   user          User                  @relation(fields: [userId], references: [id])
-  unit          EquipmentUnit         @relation(fields: [unitId], references: [id])
+  equipmentRef  Equipment?            @relation(fields: [equipmentId], references: [id], onDelete: SetNull)
+  unit          EquipmentUnit?        @relation(fields: [unitId], references: [id], onDelete: SetNull)
   payment       Payment?
   returnRecord  ReturnRecord?
   requestKey    String?               @unique @db.VarChar(64)
@@ -103,17 +108,37 @@ model RentalStatusHistory {
 }
 
 model Payment {
-  id            String    @id @default(uuid())
-  rentalId      String    @unique
-  snapToken     String?
-  amount        Float
-  paymentStatus String    @default("belum_dibayar") // "belum_dibayar", "tertunda", "berhasil", "gagal", "kedaluwarsa"
-  paymentMethod String?
-  paidAt        DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id                   String    @id @default(uuid())
+  rentalId             String    @unique
+  snapToken            String?
+  amount               Int
+  paymentStatus        String    @default("belum_dibayar") // "belum_dibayar", "tertunda", "berhasil", "gagal", "kedaluwarsa"
+  paymentMethod        String?
+  paidAt               DateTime?
+  paymentDeadline      DateTime?
+  gatewayTransactionId String?   @db.VarChar(120)
+  gatewayStatus        String?   @db.VarChar(40)
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 
-  rental Rental @relation(fields: [rentalId], references: [id], onDelete: Cascade)
+  rental        Rental                @relation(fields: [rentalId], references: [id], onDelete: Cascade)
+  gatewayEvents PaymentGatewayEvent[]
+}
+
+model PaymentGatewayEvent {
+  id                String   @id @default(uuid())
+  paymentId         String
+  eventKey          String   @unique @db.VarChar(64)
+  transactionId     String   @db.VarChar(120)
+  transactionStatus String   @db.VarChar(40)
+  statusCode        String   @db.VarChar(12)
+  grossAmount       String   @db.VarChar(32)
+  processingResult  String   @db.VarChar(40)
+  receivedAt        DateTime @default(now())
+
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  @@index([paymentId, receivedAt])
 }
 
 model ReturnRecord {
@@ -121,9 +146,9 @@ model ReturnRecord {
   rentalId              String   @unique
   actualReturnDate      DateTime @default(now())
   lateDays              Int      @default(0)
-  lateFee               Float    @default(0)
-  damageFee             Float    @default(0)
-  totalFine             Float    @default(0)
+  lateFee               Int      @default(0)
+  damageFee             Int      @default(0)
+  totalFine             Int      @default(0)
   finePaymentStatus     String   @default("belum_dibayar") // "belum_dibayar", "lunas"
   initialConditionNotes String
   finalConditionNotes   String
@@ -132,4 +157,38 @@ model ReturnRecord {
   updatedAt             DateTime @updatedAt
 
   rental Rental @relation(fields: [rentalId], references: [id], onDelete: Cascade)
+}
+
+model UserSession {
+  id        String    @id @default(uuid())
+  userId    String
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+}
+
+model LoginRateBucket {
+  key          String   @id @db.VarChar(64)
+  attempts     Int      @default(0)
+  windowEndsAt DateTime
+  updatedAt    DateTime @updatedAt
+}
+
+model MaintenanceSchedule {
+  id        String   @id @default(uuid())
+  unitId    String
+  startDate DateTime
+  endDate   DateTime
+  reason    String   @db.VarChar(500)
+  status    String   @default("terjadwal")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  unit EquipmentUnit @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  @@index([unitId, startDate, endDate])
 }

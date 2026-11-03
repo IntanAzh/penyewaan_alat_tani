@@ -10,11 +10,15 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  const productionPayments = process.env.MIDTRANS_IS_PRODUCTION === "true";
+  const midtransClientKey = process.env.MIDTRANS_CLIENT_KEY || "";
+  const expectedKeyPrefix = productionPayments ? "Mid-client-" : "SB-Mid-client-";
+  const snapScriptUrl = productionPayments
+    ? "https://app.midtrans.com/snap/snap.js"
+    : "https://app.sandbox.midtrans.com/snap/snap.js";
   return (
     <html lang="id" className="scroll-smooth">
-      <head>
-        <script type="text/javascript" src="https://app.sandbox.midtrans.com/snap/snap.js" data-client-key={process.env.MIDTRANS_CLIENT_KEY || "SB-Mid-client-YOUR_SANDBOX_CLIENT_KEY"} />
-      </head>
+      <head>{midtransClientKey.startsWith(expectedKeyPrefix) && <script type="text/javascript" src={snapScriptUrl} data-client-key={midtransClientKey} />}</head>
       <body className="antialiased">
         <AuthProvider><Navbar />{children}<AuthModal /></AuthProvider>
       </body>

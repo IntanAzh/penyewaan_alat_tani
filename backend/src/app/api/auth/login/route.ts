@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyPassword } from "@/lib/password";
 import { setSessionCookie } from "@/lib/auth";
-import { clearLoginFailures, loginRetryAfter, recordLoginFailure } from "@/lib/loginRateLimit";
+import { clearLoginFailures, consumeLoginAttempt } from "@/lib/loginRateLimit";
 
 export async function POST(req: Request) {
   try {
@@ -13,17 +13,16 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Email atau kata sandi tidak valid." }, { status: 401 });
     }
 
-    const retryAfter = loginRetryAfter(req, email);
+    const retryAfter = await consumeLoginAttempt(req, email);
     if (retryAfter) return NextResponse.json({ error: "Terlalu banyak percobaan login. Coba lagi beberapa menit." }, { status: 429, headers: { "Retry-After": String(retryAfter) } });
 
     const user = await prisma.user.findUnique({ where: { email } });
     const valid = Boolean(user?.isActive && await verifyPassword(password, user.password));
     if (!user || !valid) {
-      recordLoginFailure(req, email);
       return NextResponse.json({ error: "Email atau kata sandi tidak valid." }, { status: 401 });
     }
 
-    clearLoginFailures(req, email);
+    await clearLoginFailures(req, email);
     await setSessionCookie(user.id);
     return NextResponse.json({
       message: "Login berhasil.",

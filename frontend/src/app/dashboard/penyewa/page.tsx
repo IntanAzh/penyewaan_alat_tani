@@ -40,7 +40,7 @@ export default function PenyewaDashboard() {
     fetchRentals();
   }, [user]);
 
-  // Trigger Midtrans Snap Sandbox Checkout
+  // Open the configured Midtrans Snap checkout; payment state is confirmed only by the signed server webhook.
   const handlePaySnap = async (rental: any) => {
     setPayLoading(rental.id);
     try {
@@ -53,7 +53,7 @@ export default function PenyewaDashboard() {
 
       if (!res.ok) throw new Error(data.error || "Gagal membuat token pembayaran");
 
-      if (window.snap && data.snapToken && !data.snapToken.startsWith("DEMO-SNAP")) {
+      if (window.snap && data.snapToken) {
         // Open Midtrans Snap Popup Widget
         window.snap.pay(data.snapToken, {
           onSuccess: function (result: any) {
@@ -72,19 +72,7 @@ export default function PenyewaDashboard() {
             fetchRentals();
           },
         });
-      } else {
-        // Fallback for Sandbox Simulation mode
-        const simRes = await fetch("/api/payments/snap", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ rentalId: rental.id, paymentMethod: "Midtrans Snap Sandbox QRIS" }),
-        });
-        const simData = await simRes.json();
-        if (simRes.ok) {
-          setToastMessage("Simulasi Pembayaran Berhasil! Status berubah menjadi SIAP DIAMBIL.");
-          fetchRentals();
-        }
-      }
+      } else throw new Error("Gateway pembayaran belum tersedia. Pembayaran tidak dicatat; coba lagi nanti atau hubungi Admin.");
     } catch (err: any) {
       alert(err.message);
     } finally {
@@ -195,6 +183,7 @@ export default function PenyewaDashboard() {
               {rentals.map((r) => {
                 const isNeedPayment = r.rentalStatus === "menunggu_pembayaran";
                 const isPaid = r.payment?.paymentStatus === "berhasil";
+                const paymentDeadline = r.payment?.paymentDeadline ? new Date(r.payment.paymentDeadline) : null;
 
                 return (
                   <div
@@ -204,9 +193,9 @@ export default function PenyewaDashboard() {
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center pb-4 border-b border-gray-100 gap-2">
                       <div>
                         <span className="text-xs font-mono font-bold text-gray-400 block">{r.orderCode}</span>
-                        <h3 className="text-lg font-black text-gray-900">{r.unit.equipment.name}</h3>
+                        <h3 className="text-lg font-black text-gray-900">{r.equipmentRef?.name || r.unit?.equipment?.name || "Alat Tani"}</h3>
                         <span className="text-xs font-mono bg-[#e8f5ee] text-[#195B3E] px-2 py-0.5 rounded border border-[#195B3E]/20">
-                          Kode Unit Fisik: {r.unit.unitCode}
+                          {r.unit?.unitCode ? `Kode Unit Fisik: ${r.unit.unitCode}` : "Unit fisik ditetapkan setelah persetujuan Admin"}
                         </span>
                       </div>
                       <div>{getStatusBadge(r)}</div>
@@ -237,6 +226,12 @@ export default function PenyewaDashboard() {
                         </span>
                       </div>
                     </div>
+
+                    {isNeedPayment && paymentDeadline && (
+                      <div className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-xs text-blue-900">
+                        Batas pembayaran 24 jam: <strong>{paymentDeadline.toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Jakarta" })} WIB</strong>. Jika lewat, pesanan kedaluwarsa otomatis.
+                      </div>
+                    )}
 
                     {r.rentalStatus === "ditolak" && r.rejectReason && (
                       <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-800">
@@ -325,8 +320,8 @@ export default function PenyewaDashboard() {
 
               <div className="space-y-1 pb-3 border-b border-gray-200">
                 <span className="text-gray-400 font-medium">Alat Tani:</span>
-                <p className="font-bold text-gray-900">{selectedRental.unit.equipment.name}</p>
-                <p className="text-gray-500 font-mono">Kode Unit Fisik: {selectedRental.unit.unitCode}</p>
+                <p className="font-bold text-gray-900">{selectedRental.equipmentRef?.name || selectedRental.unit?.equipment?.name || "Alat Tani"}</p>
+                <p className="text-gray-500 font-mono">{selectedRental.unit?.unitCode ? `Kode Unit Fisik: ${selectedRental.unit.unitCode}` : "Unit ditetapkan setelah persetujuan Admin"}</p>
               </div>
 
               <div className="grid grid-cols-2 gap-2 pb-3 border-b border-gray-200">

@@ -276,7 +276,7 @@ export default function AdminDashboard() {
       Panen: 0,
     };
     rentals.forEach((r) => {
-      const cat = r.unit?.equipment?.category;
+      const cat = r.equipmentRef?.category || r.unit?.equipment?.category;
       if (cat && categoryCounts[cat] !== undefined) {
         categoryCounts[cat] += 1;
       } else if (cat) {
@@ -308,6 +308,7 @@ export default function AdminDashboard() {
       const searchMatch = !searchQuery || 
         r.orderCode?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         r.user?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        r.equipmentRef?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         r.unit?.equipment?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         r.unit?.unitCode?.toLowerCase().includes(searchQuery.toLowerCase());
 
@@ -834,11 +835,11 @@ export default function AdminDashboard() {
                 return (
                   <article key={r.id} className="space-y-3 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
                     <div className="flex flex-wrap items-start justify-between gap-2">
-                      <div className="min-w-0"><p className="break-all font-mono text-[10px] font-bold text-gray-500">{r.orderCode}</p><h3 className="mt-1 break-words text-sm font-black text-gray-900">{r.unit?.equipment?.name || "Alat Tani"}</h3><p className="text-[11px] text-gray-500">{r.user?.name} · {r.user?.phone}</p></div>
+                      <div className="min-w-0"><p className="break-all font-mono text-[10px] font-bold text-gray-500">{r.orderCode}</p><h3 className="mt-1 break-words text-sm font-black text-gray-900">{r.equipmentRef?.name || r.unit?.equipment?.name || "Alat Tani"}</h3><p className="text-[11px] text-gray-500">{r.user?.name} · {r.user?.phone}</p></div>
                       <span className="shrink-0 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-bold text-emerald-800">{r.rentalStatus.replaceAll("_", " ")}</span>
                     </div>
                     <div className="grid grid-cols-2 gap-3 border-y border-gray-100 py-3 text-[11px]">
-                      <div><span className="block text-gray-400">Unit fisik</span><strong className="break-all text-gray-800">{r.unit?.unitCode}</strong></div>
+                      <div><span className="block text-gray-400">Unit fisik</span><strong className="break-words text-gray-800">{r.unit?.unitCode || "Ditetapkan saat disetujui"}</strong></div>
                       <div><span className="block text-gray-400">Total biaya</span><strong className="text-gray-800">Rp {(r.totalRentalFee || 0).toLocaleString("id-ID")}</strong></div>
                       <div><span className="block text-gray-400">Jadwal sewa</span><strong className="text-gray-800">{new Date(r.startDate).toLocaleDateString("id-ID")} – {new Date(r.endDate).toLocaleDateString("id-ID")}</strong></div>
                       <div><span className="block text-gray-400">Pembayaran</span><strong className="text-gray-800">{r.payment?.paymentStatus || "belum dibayar"}</strong></div>
@@ -917,10 +918,10 @@ export default function AdminDashboard() {
                           {/* Alat & Unit Fisik */}
                           <td className="py-4 px-6">
                             <span className="font-bold text-gray-900 block">
-                              {r.unit?.equipment?.name || "Alat Tani"}
+                              {r.equipmentRef?.name || r.unit?.equipment?.name || "Alat Tani"}
                             </span>
                             <span className="font-mono text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-md inline-block mt-0.5">
-                              {r.unit?.unitCode}
+                              {r.unit?.unitCode || "Unit ditetapkan saat persetujuan"}
                             </span>
                           </td>
 

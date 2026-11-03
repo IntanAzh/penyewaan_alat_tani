@@ -34,6 +34,10 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       },
       select: { unitId: true, startDate: true, endDate: true, rentalStatus: true },
     }) : [];
+    const schedules = rentableUnitIds.length ? await prisma.maintenanceSchedule.findMany({
+      where: { unitId: { in: rentableUnitIds }, status: "terjadwal", startDate: { lt: nextMonth }, endDate: { gte: monthStart } },
+      select: { unitId: true, startDate: true, endDate: true },
+    }) : [];
 
     const calendarDays = Array.from({ length: daysInMonth }, (_, index) => {
       const date = new Date(Date.UTC(year, monthIndex, index + 1));
@@ -42,12 +46,14 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
         const stillInUse = ACTIVE_RENTAL_STATUSES.includes(rental.rentalStatus) && rental.startDate <= date;
         return overlaps || stillInUse;
       }).map((rental) => rental.unitId));
+      const maintainedUnits = new Set(schedules.filter((schedule) => schedule.startDate <= date && schedule.endDate >= date).map((schedule) => schedule.unitId));
+      for (const unitId of maintainedUnits) busyUnits.add(unitId);
       const bookedUnitsCount = busyUnits.size;
       return {
         date: date.toISOString().slice(0, 10),
         availableUnitsCount: Math.max(0, rentableUnits.length - bookedUnitsCount),
         bookedUnitsCount,
-        maintenanceUnitsCount,
+        maintenanceUnitsCount: new Set([...equipment.units.filter((unit) => unit.conditionStatus === "perawatan").map((unit) => unit.id), ...maintainedUnits]).size,
       };
     });
 

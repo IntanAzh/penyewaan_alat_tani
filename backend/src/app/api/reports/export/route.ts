@@ -4,6 +4,13 @@ import { requireSessionUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
+function csvCell(value: unknown): string {
+  let text = value === null || value === undefined ? "" : String(value);
+  // Excel/LibreOffice may execute formulas after trimming leading control/space characters.
+  if (/^[\s\u0000-\u001f]*[=+\-@]/.test(text) || /^[\t\r\n]/.test(text)) text = `'${text}`;
+  return `"${text.replace(/"/g, '""')}"`;
+}
+
 export async function GET(req: Request) {
   try {
     const { response } = await requireSessionUser("admin");
@@ -12,6 +19,7 @@ export async function GET(req: Request) {
       include: {
         user: true,
         unit: { include: { equipment: true } },
+        equipmentRef: true,
         payment: true,
         returnRecord: true,
       },
@@ -51,30 +59,18 @@ export async function GET(req: Request) {
       const fineAmount = r.returnRecord?.totalFine || 0;
       const totalInvoice = r.totalRentalFee + fineAmount;
 
+      const equipment = r.unit?.equipment || r.equipmentRef;
       return [
-        `"${r.orderCode}"`,
-        `"${r.unit.unitCode}"`,
-        `"${r.unit.equipment.name}"`,
-        `"${r.user.name}"`,
-        `"${r.user.email}"`,
-        `"${r.user.phone}"`,
-        `"${startDate}"`,
-        `"${endDate}"`,
-        `"${actualReturn}"`,
-        r.durationDays,
-        r.dailyRate,
-        r.totalRentalFee,
-        fineAmount,
-        totalInvoice,
-        `"${r.rentalStatus}"`,
-        `"${r.payment?.paymentStatus || "belum_dibayar"}"`,
-        `"${(r.returnRecord?.initialConditionNotes || "Kondisi fisik prima").replace(/"/g, '""')}"`,
-        `"${(r.returnRecord?.finalConditionNotes || "-").replace(/"/g, '""')}"`,
-        `"${(r.returnRecord?.adminNotes || "-").replace(/"/g, '""')}"`,
-      ].join(",");
+        r.orderCode, r.unit?.unitCode || "Belum dialokasikan", equipment?.name || "Alat tidak tersedia",
+        r.user.name, r.user.email, r.user.phone, startDate, endDate, actualReturn,
+        r.durationDays, r.dailyRate, r.totalRentalFee, fineAmount, totalInvoice,
+        r.rentalStatus, r.payment?.paymentStatus || "belum_dibayar",
+        r.returnRecord?.initialConditionNotes || "Kondisi fisik prima",
+        r.returnRecord?.finalConditionNotes || "-", r.returnRecord?.adminNotes || "-",
+      ].map(csvCell).join(",");
     });
 
-    const csvContent = "\uFEFF" + [headers.join(","), ...rows].join("\n"); // Add UTF-8 BOM for Excel
+    const csvContent = "\uFEFF" + [headers.map(csvCell).join(","), ...rows].join("\r\n"); // UTF-8 BOM for spreadsheet software
 
     return new Response(csvContent, {
       status: 200,
