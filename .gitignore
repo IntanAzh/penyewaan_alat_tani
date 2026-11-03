@@ -1,0 +1,15 @@
+node_modules/
+.next/
+frontend/.next/
+backend/.next/
+out/
+build/
+dist/
+coverage/
+.env*
+!.env.example
+**/.env*
+!**/.env.example
+**/*.db
+**/*.db-journal
+npm-debug.log*
