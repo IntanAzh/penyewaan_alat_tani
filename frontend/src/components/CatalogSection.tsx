@@ -17,10 +17,10 @@ interface Equipment {
 }
 
 const samples: Equipment[] = [
-  { id: "sample-tiller", name: "Traktor Tangan", category: "Pengolahan Tanah", dailyRate: 150000, description: "Traktor tangan untuk menyiapkan lahan dengan cepat.", imageUrl: "https://images.unsplash.com/photo-1592982537447-7440770cbfc9?auto=format&fit=crop&w=720&q=80", availableUnitsCount: 4, units: [], isSample: true },
+  { id: "sample-tiller", name: "Traktor Tangan", category: "Pengolahan Tanah", dailyRate: 150000, description: "Traktor tangan untuk menyiapkan lahan dengan cepat.", imageUrl: "https://images.unsplash.com/photo-1747025282853-4a043235b682?auto=format&fit=crop&w=720&q=80", availableUnitsCount: 4, units: [], isSample: true },
   { id: "sample-transplanter", name: "Mesin Perontok Padi", category: "Panen & Pascapanen", dailyRate: 175000, description: "Membantu proses panen dan pascapanen lebih rapi.", imageUrl: "https://images.unsplash.com/photo-1586771107445-d3ca888129ff?auto=format&fit=crop&w=720&q=80", availableUnitsCount: 3, units: [], isSample: true },
   { id: "sample-pump", name: "Pompa Air Irigasi", category: "Irigasi", dailyRate: 60000, description: "Pompa air untuk mendukung kebutuhan pengairan.", imageUrl: "https://images.unsplash.com/photo-1615811361523-6bd03d7748e7?auto=format&fit=crop&w=720&q=80", availableUnitsCount: 5, units: [], isSample: true },
-  { id: "sample-mower", name: "Mesin Potong Rumput", category: "Perawatan Tanaman", dailyRate: 45000, description: "Perawatan area tanam dan kebun lebih mudah.", imageUrl: "https://images.unsplash.com/photo-1589923188900-85dae523342b?auto=format&fit=crop&w=720&q=80", availableUnitsCount: 2, units: [], isSample: true },
+  { id: "sample-mower", name: "Mesin Potong Rumput", category: "Perawatan Tanaman", dailyRate: 45000, description: "Perawatan area tanam dan kebun lebih mudah.", imageUrl: "https://images.unsplash.com/photo-1608624076549-9e27ec6fd229?auto=format&fit=crop&w=720&q=80", availableUnitsCount: 2, units: [], isSample: true },
 ];
 
 const rupiah = (amount: number) => `Rp${amount.toLocaleString("id-ID")}`;
@@ -144,3 +144,4 @@ export default function CatalogSection() {
     </section>
   );
 }
+

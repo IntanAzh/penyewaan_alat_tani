@@ -32,11 +32,11 @@ body {
 .category-card:hover { transform: translateY(-2px); background: #e2eadd; }
 .product-card { overflow: hidden; border: 1px solid #e2e5dd; border-radius: 7px; background: #fff; padding: 5px; }
 .product-card__image { display: block; width: 100%; height: 123px; border-radius: 4px; object-fit: cover; }
-.value-photo { min-height: 260px; border-radius: 5px; background: center / cover no-repeat url('https://images.unsplash.com/photo-1589923188900-85dae523342b?auto=format&fit=crop&w=1200&q=85'); }
+.value-photo { min-height: 260px; border-radius: 5px; background: center / cover no-repeat url('https://images.unsplash.com/photo-1556012698-dba522bfe2f0?auto=format&fit=crop&w=1200&q=85'); }
 .step-card { min-height: 144px; border: 1px solid #e2e5dd; border-radius: 6px; padding: 13px 11px; }
 .review-card { min-height: 140px; border-radius: 7px; background: #f1f4ed; padding: 16px; }
 .landing-hero { min-height: 625px; }
-.landing-hero__image { background: center 52% / cover no-repeat url('https://images.unsplash.com/photo-1592982537447-7440770cbfc9?auto=format&fit=crop&w=2000&q=90'); }
+.landing-hero__image { background: center 52% / cover no-repeat url('https://images.unsplash.com/photo-1747025282853-4a043235b682?auto=format&fit=crop&w=2000&q=90'); }
 .landing-hero__shade { background: linear-gradient(90deg, rgba(12, 49, 35, .9) 0%, rgba(12, 49, 35, .69) 37%, rgba(12, 49, 35, .18) 72%, rgba(12, 49, 35, .04) 100%), linear-gradient(0deg, rgba(18, 41, 29, .25), transparent 55%); }
 
 ::-webkit-scrollbar { width: 8px; }
@@ -56,3 +56,4 @@ body {
   .stat-item:nth-child(even) { border-left: 1px solid #d4ddd3; }
   .value-photo { min-height: 220px; }
 }
+
