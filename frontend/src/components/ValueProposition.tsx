@@ -1,7 +1,7 @@
-import { Check, Leaf, ShieldCheck } from "lucide-react";
+import { Wallet, Leaf, ShieldCheck } from "lucide-react";
 
 const benefits = [
-  { icon: Check, title: "Hemat untuk benih dan pupuk", text: "Bayar sesuai hari pemakaian, bukan biaya beli alat." },
+  { icon: Wallet, title: "Hemat untuk benih dan pupuk", text: "Bayar sesuai hari pemakaian, bukan biaya beli alat." },
   { icon: ShieldCheck, title: "Terawat, bersih, siap tanam", text: "Setiap unit dicek sebelum diserahkan kepada penyewa." },
   { icon: Leaf, title: "Lebih bijak berbagi alat pertanian", text: "Satu alat bisa membantu lebih banyak petani." },
 ];

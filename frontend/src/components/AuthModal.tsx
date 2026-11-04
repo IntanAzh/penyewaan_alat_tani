@@ -1,9 +1,11 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
-import { X, Lock, Mail, User as UserIcon, Phone, Leaf, ArrowRight } from "lucide-react";
+import logo from "../../image/logo.png";
+import { X, Lock, Mail, User as UserIcon, Phone, ArrowRight } from "lucide-react";
 
 export default function AuthModal() {
   const router = useRouter();
@@ -78,9 +80,9 @@ export default function AuthModal() {
         </button>
 
         <div className="px-5 pb-5 pt-9 sm:px-8">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-11 h-11 rounded-2xl bg-[#195B3E] text-[#FAF5E9] grid place-items-center"><Leaf className="w-5 h-5" /></div>
-            <div><p className="text-[10px] uppercase tracking-[.18em] text-[#66806a] font-bold">TaniSewa</p><p className="text-xs text-[#748174]">Penyewaan alat pertanian</p></div>
+          <div className="mb-6">
+            <Image src={logo} alt="SewaAlat" priority className="h-auto w-[190px] object-contain object-left" />
+            <p className="mt-1 text-xs text-[#748174]">Penyewaan alat pertanian</p>
           </div>
           <p className="text-[11px] uppercase tracking-[.16em] text-[#66806a] font-bold">{authMode === "login" ? "Selamat datang kembali" : "Mulai dari sini"}</p>
           <h2 id="auth-title" className="text-[26px] leading-tight font-black text-[#183F30] mt-1">

@@ -1,8 +1,8 @@
-import { ShieldCheck, Leaf, Headset } from "lucide-react";
+import { CalendarDays, ClipboardCheck, Headset } from "lucide-react";
 
 const points = [
-  { icon: ShieldCheck, title: "Jadwal musim transparan", text: "Tanggal tersedia dan perawatan alat dapat dilihat." },
-  { icon: Leaf, title: "Pemeriksaan alat bersama", text: "Kondisi alat pertanian dicatat saat serah terima." },
+  { icon: CalendarDays, title: "Jadwal musim transparan", text: "Tanggal tersedia dan perawatan alat dapat dilihat." },
+  { icon: ClipboardCheck, title: "Pemeriksaan alat bersama", text: "Kondisi alat pertanian dicatat saat serah terima." },
   { icon: Headset, title: "Tim yang siap membantu", text: "Senin–Sabtu, 09.00–17.00 WIB." },
 ];
 

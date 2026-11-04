@@ -6,16 +6,12 @@ Aplikasi penyewaan alat pertanian dengan React (Next.js) sebagai frontend dan No
 
 - `frontend/` — Halaman React (Next.js App Router), komponen visual, konteks autentikasi, dan konfigurasi Tailwind CSS.
 - `backend/` — API routes Node.js, otentikasi sesi scrypt, integrasi Midtrans Snap, Prisma ORM schema, dan migrasi MySQL.
-- `docs/` — PRD, baseline requirement sistem, dan dokumentasi modul.
 
 ## Panduan Menjalankan Proyek (Windows & Laragon)
 
 1. Jalankan MySQL di Laragon (port default lokal: `3306`).
 2. Pastikan database `tanisewa` sudah dibuat (atau jalankan script `backend/prisma/phpmyadmin-setup.sql`).
-3. Salin `.env.example` menjadi file tunggal `.env` di root proyek. Frontend, backend, dan Prisma membaca konfigurasi terpusat dari file ini:
-   ```env
-   DATABASE_URL="mysql://root:@127.0.0.1:3306/tanisewa"
-   ```
+3. Buat file `.env` lokal di root proyek. Isi nilai konfigurasi yang sesuai untuk `DATABASE_URL`, `SESSION_SECRET`, `MIDTRANS_CLIENT_KEY`, `MIDTRANS_SERVER_KEY`, `MIDTRANS_IS_PRODUCTION`, `CRON_SECRET`, `SEED_ADMIN_PASSWORD`, dan `SEED_DEMO_USER_PASSWORD`. Jangan unggah file `.env` ke GitHub.
 4. Jalankan `npm install` (jika dependensi belum terpasang).
 5. Jalankan `npm run db:push` untuk menyinkronkan tabel ke database MySQL.
 6. Jalankan `npm run dev` untuk menyalakan kedua server secara bersamaan:
